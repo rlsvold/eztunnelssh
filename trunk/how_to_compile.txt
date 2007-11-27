@@ -1,0 +1,25 @@
+2007-11-27 Lionel Lemarié
+Tested with Qt 4.3.2 at the time of writing.
+
+
+On Windows with Visual Studio 2003 or 2005:
+- Install Qt 4.3.2, compile it and set the environment variables correctly
+  as per the Qt documentation (QTDIR, MKSPECS, PATH).
+- Go to the "build" directory in this source and open a command line there.
+- Run vcvars32.bat to setup the Visual Studio variables.
+- Run "qmake -tp vc" to create the project file.
+- Open the project file and save the solution (it will ask the first time
+  you compile).
+- Compile.
+
+On Linux:
+- Install Qt 4.3.2, apt-get it or compile it and set the environment
+  variables as per the Qt documentation (QTDIR, MKSPECS, PATH).
+  "sudo apt-get install libqt4-dev" for debian-based systems.
+- Go to the "build" directory in this source.
+- Run "qmake".
+- Run "make".
+
+
+To clean the source:
+- In the build directory, delete everything except ezTunnelSSH.pro.
