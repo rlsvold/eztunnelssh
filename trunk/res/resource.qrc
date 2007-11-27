@@ -1,0 +1,12 @@
+<RCC>
+    <qresource prefix="/" >
+        <file>add.png</file>
+        <file>edit.png</file>
+        <file>copy.png</file>
+        <file>delete.png</file>
+        <file>connect.png</file>
+        <file>connected.png</file>
+        <file>connecting.png</file>
+        <file>disconnected.png</file>
+    </qresource>
+</RCC>
