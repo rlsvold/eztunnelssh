@@ -85,6 +85,7 @@ public slots:
 	void slotConnectorFinished( int iTunnelIndex );
 	void slotAutoConnect( int iIndex );
 	void slotBrowseKeyFile();
+	void slotItemDoubleClicked();
 
 signals:
 	void signalSetTrayIcon( int iIndex );

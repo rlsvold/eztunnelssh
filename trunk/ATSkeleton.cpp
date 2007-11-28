@@ -58,6 +58,7 @@ void ATSkeletonWindow::wireSignals()
 
 	// Connect tree
 	ATVERIFY( connect( ui.treeTunnels, SIGNAL( itemSelectionChanged() ), this, SLOT( slotSelectTunnel() ) ) );
+	ATVERIFY( connect( ui.treeTunnels, SIGNAL( itemDoubleClicked(QTreeWidgetItem*,int) ), this, SLOT( slotItemDoubleClicked() ) ) );
 
 	// Connect buttons
 	ATVERIFY( connect( this, SIGNAL( signalAutoConnect(int) ), this, SLOT( slotAutoConnect(int) ), Qt::QueuedConnection ) );
@@ -206,7 +207,12 @@ void ATSkeletonWindow::slotDeleteTunnel()
 			}
 		}
 
-		m_bDisableChanges = false;
+		// Need to find all later tunnel connectors and decrement indices
+		for ( int i=iIndex; i<m_listTunnels.Count(); i++ )
+		{
+			if ( m_listTunnels.at(i).pConnector )
+				m_listTunnels[i].pConnector->m_iTunnelIndex--;
+		}
 	}
 }
 
@@ -232,6 +238,11 @@ void ATSkeletonWindow::slotDisconnect()
 	pt->iShouldReconnect = 0;
 
 	disconnectTunnel( iIndex );
+}
+
+void ATSkeletonWindow::slotItemDoubleClicked()
+{
+	slotConnect();
 }
 
 void ATSkeletonWindow::slotBrowseKeyFile()
@@ -331,7 +342,10 @@ void ATSkeletonWindow::connectTunnel( int iTunnelIndex )
 	strCommand += strPlink + " ";
 	strCommand += "-v ";
 
-	strCommand += pt->strSSHHost + " ";
+	QStringList strListSSHHost = pt->strSSHHost.split( ':', QString::SkipEmptyParts );
+	if ( strListSSHHost.count() == 1 ) strListSSHHost << "22";
+
+	strCommand += strListSSHHost.at(0) + " -P " + strListSSHHost.at(1) + " ";
 
 	if ( !pt->strUsername.isEmpty() ) strCommand += QString( "-l %1 " ).arg( pt->strUsername );
 
@@ -403,8 +417,13 @@ void ATSkeletonWindow::disconnectTunnel( int iTunnelIndex )
 
 		if ( pt->iShouldReconnect > 0 )
 		{
+			AddToLog( iTunnelIndex, "Connection lost, reconnecting... (%d)", pt->iShouldReconnect );
 			pt->iShouldReconnect--;
 			emit signalAutoConnect( iTunnelIndex );
+		}
+		else
+		{
+			AddToLog( iTunnelIndex, "Connection lost, giving up." );
 		}
 	}
 }
@@ -680,11 +699,8 @@ static int safe_vsnprintf(char *buffer, size_t count, const char *format, va_lis
 	if (count <= 0)
 		return 0;
 
-#ifdef WIN32
-	int nReturn = _vsnprintf_s(buffer, count, count, format, argptr);
-#else
-	int nReturn = vsnprintf(buffer, count, format, argptr);
-#endif
+	IF_WIN32(  int nReturn = _vsnprintf_s(buffer, count, count, format, argptr) );
+	IF_NWIN32( int nReturn = vsnprintf(buffer, count, format, argptr) );
 
 	buffer[count-1] = '\0';
 
@@ -807,9 +823,7 @@ m_iTunnelIndex( iTunnelIndex )
 {
 }
 
-#ifndef WIN32
-#define strtok_s(a,b,c) strtok(a,b)
-#endif
+IF_NWIN32( #define strtok_s(a,b,c) strtok(a,b) )
 
 void ATTunnelConnector_c::slotProcessReadStandardOutput()
 {

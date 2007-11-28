@@ -4,6 +4,8 @@
 #include "ATNamedAction.h"
 #include "ATSkeleton.h"
 
+#define MIN_TRIGGER_TIMER (1000)
+
 ATMainWindow_c::ATMainWindow_c( QWidget *vpParent ):
 QMainWindow( vpParent )
 {
@@ -20,6 +22,8 @@ QMainWindow( vpParent )
 	readSettings();
 
 	slotChangeStyle( m_strStyle );
+
+	m_lastTrayTrigger.start();
 }
 
 
@@ -59,15 +63,19 @@ void ATMainWindow_c::iconActivated(QSystemTrayIcon::ActivationReason reason)
 {
 	switch (reason) {
 	case QSystemTrayIcon::Trigger:
-		if ( isVisible() )
+		if ( m_lastTrayTrigger.elapsed() > MIN_TRIGGER_TIMER )
 		{
-			hide();
+			if ( isVisible() )
+			{
+				hide();
+			}
+			else
+			{
+				showNormal();
+				IF_WIN32( ::SetForegroundWindow( winId() ) );
+			}
 		}
-		else
-		{
-			showNormal();
-			IF_WIN32( ::SetForegroundWindow( winId() ) );
-		}
+		m_lastTrayTrigger.restart();
 		break;
 	//case QSystemTrayIcon::DoubleClick:
 	//	break;
@@ -110,7 +118,7 @@ bool ATMainWindow_c::InitMenusAndActions()
 	QMenu *pFileMenu	= new QMenu(this);
 	pAction				= new QAction(QObject::tr("&Quit"), this);
 	pAction->setShortcut(QObject::tr("CTRL+Q"));
-	bool bRet			= QObject::connect(pAction, SIGNAL(triggered()), qApp, SLOT(closeAllWindows()));
+	bool bRet			= QObject::connect(pAction, SIGNAL(triggered()), qApp, SLOT(quit()));
 	ATASSERT( bRet );
 
 	pFileMenu->addAction( pAction );
@@ -187,9 +195,16 @@ void ATMainWindow_c::slotChangeStyle( QString strStyle )
 
 void ATMainWindow_c::closeEvent( QCloseEvent * event )
 {
-	m_pMainWindow->onClose();
-
-	event->accept();
+	if ( 0 ) // set to 1 to quit on close, set to 0 to hide on close
+	{
+		m_pMainWindow->onClose();
+		event->accept();
+	}
+	else
+	{
+		hide();
+		event->ignore();
+	}
 }
 
 void ATMainWindow_c::slotShowAbout()
