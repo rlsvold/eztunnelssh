@@ -4,11 +4,6 @@
 #include "ATNamedAction.h"
 #include "ATSkeleton.h"
 
-//++
-// Details:	None
-// Args:	None
-// Return:	None
-//--
 ATMainWindow_c::ATMainWindow_c( QWidget *vpParent ):
 QMainWindow( vpParent )
 {
@@ -64,18 +59,18 @@ void ATMainWindow_c::iconActivated(QSystemTrayIcon::ActivationReason reason)
 {
 	switch (reason) {
 	case QSystemTrayIcon::Trigger:
-#ifndef WIN32
-		hide();
-#endif
+		if ( isVisible() )
+		{
+			hide();
+		}
+		else
+		{
+			showNormal();
+			IF_WIN32( ::SetForegroundWindow( winId() ) );
+		}
 		break;
-	case QSystemTrayIcon::DoubleClick:
-#ifdef WIN32
-		::ShowWindow( winId(), SW_SHOWNORMAL );
-		::SetForegroundWindow( winId() );
-#else
-		showNormal();
-#endif
-		break;
+	//case QSystemTrayIcon::DoubleClick:
+	//	break;
 	//case QSystemTrayIcon::MiddleClick:
 	//	break;
 	default:
@@ -108,11 +103,6 @@ bool ATMainWindow_c::winEvent( MSG *m, long *result )
 } 
 #endif
 
-//++
-// Details:	None
-// Args:	None
-// Return:	None
-//--
 bool ATMainWindow_c::InitMenusAndActions()
 {
 	QAction *pAction;
@@ -148,21 +138,11 @@ bool ATMainWindow_c::InitMenusAndActions()
 	return true;
 }
 
-//++
-// Details:	None
-// Args:	None
-// Return:	None
-//--
 ATMainWindow_c::~ATMainWindow_c()
 {
 	writeSettings();
 }
 
-//++
-// Details:	None
-// Args:	None
-// Return:	None
-//--
 void ATMainWindow_c::readSettings()
 {
 	QSettings settings( g_strIniFile, QSettings::IniFormat);
@@ -171,22 +151,11 @@ void ATMainWindow_c::readSettings()
 	int bMax = settings.value( "maximized", 0 ).toInt();
 	m_strStyle = settings.value( "qtstyle", "" ).toString();
 
-	// ATDEBUG( "Read Settings:" );
-	// ATDEBUG( "	Pos: %d, %d", pos.x(), pos.y() );
-	// ATDEBUG( "	Size: %dx%d", size.width(), size.height() );
-	// ATDEBUG( "	Maximized: %d", bMax );
-	// ATDEBUG( "	Style: %s", qPrintable(m_strStyle) );
-
 	if ( pos.x() && pos.y() ) move(pos);
 	if ( !size.isEmpty() ) resize(size);
 	if ( bMax ) showMaximized();
 }
 
-//++
-// Details:	None
-// Args:	None
-// Return:	None
-//--
 void ATMainWindow_c::writeSettings()
 {
 	int bMax = isMaximized();
@@ -200,20 +169,9 @@ void ATMainWindow_c::writeSettings()
 	settings.setValue( "maximized", bMax );
 	settings.setValue( "qtstyle", m_strStyle );
 
-	// ATDEBUG( "Write Settings:" );
-	// ATDEBUG( "	Pos: %d, %d", pos().x(), pos().y() );
-	// ATDEBUG( "	Size: %dx%d", size().width(), size().height() );
-	// ATDEBUG( "	Maximized: %d", bMax );
-	// ATDEBUG( "	Style: %s", qPrintable(m_strStyle) );
-
 	settings.sync();
 }
 
-//++
-// Details:	None
-// Args:	None
-// Return:	None
-//--
 void ATMainWindow_c::slotChangeStyle( QString strStyle )
 {
 	ATDEBUG( __FUNCTION__ );

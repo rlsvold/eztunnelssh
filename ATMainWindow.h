@@ -28,9 +28,7 @@ protected:
 	void closeEvent ( QCloseEvent * event );
 
 private:
-#ifdef WIN32
-	bool winEvent( MSG *m, long *result );
-#endif
+	IF_WIN32( bool winEvent( MSG *m, long *result ) );
 
 	ATSkeletonWindow *m_pMainWindow;
 	QString m_strStyle;
