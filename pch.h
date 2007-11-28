@@ -1,22 +1,21 @@
 // Precompiled header
 
+#ifndef __EZTUNNEL_PCH_H__
+#define __EZTUNNEL_PCH_H__
+
 #ifdef WIN32
 // WINDOWS
 #define IF_WIN32(_X) _X
 #define IF_NWIN32(_X)
+#include <windows.h>
 #else
 // LINUX
 #define IF_NWIN32(_X) _X
 #define IF_WIN32(_X)
 #endif
 
-#ifndef __EZTUNNEL_PCH_H__
-#define __EZTUNNEL_PCH_H__
-
 #include <Qt>
 #include <QtGui>
-
-IF_WIN32(#include <windows.h>)
 
 #include <assert.h>
 

@@ -40,6 +40,8 @@ private:
 
 	void readSettings();
 	void writeSettings();
+
+	QTime m_lastTrayTrigger;
 };
 
 #endif
