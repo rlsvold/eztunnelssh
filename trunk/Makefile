@@ -1,11 +1,11 @@
 
-all: build/Makefile build/ezTunnelSSH
+all: build/Makefile build/ezTunnelSSH_
 
 
 build/Makefile:
 	( cd build; qmake )
 
-build/ezTunnelSSH:
+build/ezTunnelSSH_:
 	( cd build; make -f Makefile.Release )
 
 clean:

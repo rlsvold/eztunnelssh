@@ -31,11 +31,6 @@ ATSkeletonWindow::ATSkeletonWindow(QWidget *parent)
 	emit signalAutoConnect(-1); // auto connect all
 }
 
-//++
-// Details:	None
-// Args:	None
-// Return:	None
-//--
 ATSkeletonWindow::~ATSkeletonWindow()
 {
 	writeSettings();
@@ -46,11 +41,6 @@ ATSkeletonWindow::~ATSkeletonWindow()
 	}
 }
 
-//++
-// Details:	None
-// Args:	None
-// Return:	None
-//--
 void ATSkeletonWindow::wireSignals()
 {
 	// Connect buttons
@@ -73,15 +63,9 @@ void ATSkeletonWindow::wireSignals()
 	ATVERIFY( connect( this, SIGNAL( signalAutoConnect(int) ), this, SLOT( slotAutoConnect(int) ), Qt::QueuedConnection ) );
 }
 
-//++
-// Details:	None
-// Args:	None
-// Return:	None
-//--
 void ATSkeletonWindow::readSettings()
 {
 	QSettings settings( g_strIniFile, QSettings::IniFormat);
-	// strValue = settings.value( "value", "default" ).toString();
 
 	m_listTunnels.Clear();
 	ui.treeTunnels->clear();
@@ -126,18 +110,9 @@ void ATSkeletonWindow::readSettings()
 	}
 }
 
-//++
-// Details:	None
-// Args:	None
-// Return:	None
-//--
 void ATSkeletonWindow::writeSettings()
 {
 	QSettings settings( g_strIniFile, QSettings::IniFormat);
-	//	settings.setValue( "key", strValue );
-
-	//	ATDEBUG( "Write Settings:" );
-	//	ATDEBUG( "	Value: %s", qPrintable(strValue) );
 
 	settings.setValue( "NumberOfTunnels", m_listTunnels.Count() );
 
@@ -356,10 +331,6 @@ void ATSkeletonWindow::connectTunnel( int iTunnelIndex )
 	strCommand += strPlink + " ";
 	strCommand += "-v ";
 
-#ifndef WIN32
-	// strCommand += "-v -v ";
-#endif
-
 	strCommand += pt->strSSHHost + " ";
 
 	if ( !pt->strUsername.isEmpty() ) strCommand += QString( "-l %1 " ).arg( pt->strUsername );
@@ -370,9 +341,7 @@ void ATSkeletonWindow::connectTunnel( int iTunnelIndex )
 
 	if ( pt->iDirection == 0 ) // Local -> Remote
 	{
-#ifndef WIN32
-		strCommand += "-g ";
-#endif
+		IF_NWIN32( strCommand += "-g " );
 		strCommand += QString( "-L %1:%2:%3 " ).arg( pt->iLocalPort ).arg( pt->strRemoteHost).arg( pt->iRemotePort );		
 	}
 	else // Remote -> Local
