@@ -823,7 +823,9 @@ m_iTunnelIndex( iTunnelIndex )
 {
 }
 
-IF_NWIN32( #define strtok_s(a,b,c) strtok(a,b) )
+#ifndef _WIN32
+#define strtok_s(a,b,c) strtok(a,b)
+#endif
 
 void ATTunnelConnector_c::slotProcessReadStandardOutput()
 {
