@@ -42,6 +42,10 @@ private:
 	void writeSettings();
 
 	QTime m_lastTrayTrigger;
+
+	QIcon m_iconConnected;
+	QIcon m_iconConnecting;
+	QIcon m_iconDisconnected;
 };
 
 #endif
