@@ -4,7 +4,7 @@
 #include "ATMainWindow.h"
 
 // For the about box
-const char *APP_VERSION = "0.7.0"; // Don't forget the resource file.
+const char *APP_VERSION = "0.7.1"; // Don't forget the resource file.
 const char *APP_DATE = __DATE__;
 const char *APP_NICE_NAME = "ezTunnel SSH";
 

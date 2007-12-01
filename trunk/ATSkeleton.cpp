@@ -58,7 +58,7 @@ void ATSkeletonWindow::wireSignals()
 
 	// Connect tree
 	ATVERIFY( connect( ui.treeTunnels, SIGNAL( itemSelectionChanged() ), this, SLOT( slotSelectTunnel() ) ) );
-	ATVERIFY( connect( ui.treeTunnels, SIGNAL( itemDoubleClicked(QTreeWidgetItem*,int) ), this, SLOT( slotItemDoubleClicked() ) ) );
+	ATVERIFY( connect( ui.treeTunnels, SIGNAL( itemDoubleClicked(QTreeWidgetItem*,int) ), this, SLOT( slotItemDoubleClicked(QTreeWidgetItem*) ) ) );
 
 	// Connect buttons
 	ATVERIFY( connect( this, SIGNAL( signalAutoConnect(int) ), this, SLOT( slotAutoConnect(int) ), Qt::QueuedConnection ) );
@@ -240,9 +240,22 @@ void ATSkeletonWindow::slotDisconnect()
 	disconnectTunnel( iIndex );
 }
 
-void ATSkeletonWindow::slotItemDoubleClicked()
+void ATSkeletonWindow::slotItemDoubleClicked(QTreeWidgetItem *twi)
 {
-	slotConnect();
+	if ( twi == NULL ) return;
+
+	ui.tabWidget->setCurrentIndex( PAGE_CONNECT );
+
+	int iIndex = twi->data( 0, Qt::UserRole ).toInt();
+	if ( iIndex >= 0 && iIndex < m_listTunnels.Count() )
+	{
+		const Tunnel_c *pt = &m_listTunnels.at(iIndex);
+
+		if (pt->pProcess)
+			slotDisconnect();
+		else
+			slotConnect();
+	}
 }
 
 void ATSkeletonWindow::slotBrowseKeyFile()
@@ -342,10 +355,14 @@ void ATSkeletonWindow::connectTunnel( int iTunnelIndex )
 	strCommand += strPlink + " ";
 	strCommand += "-v ";
 
+#ifdef _WIN32
 	QStringList strListSSHHost = pt->strSSHHost.split( ':', QString::SkipEmptyParts );
 	if ( strListSSHHost.count() == 1 ) strListSSHHost << "22";
 
 	strCommand += strListSSHHost.at(0) + " -P " + strListSSHHost.at(1) + " ";
+#else
+	strCommand += pt->strSSHHost + " ";
+#endif
 
 	if ( !pt->strUsername.isEmpty() ) strCommand += QString( "-l %1 " ).arg( pt->strUsername );
 

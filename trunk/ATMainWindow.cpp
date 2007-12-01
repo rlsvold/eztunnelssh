@@ -7,12 +7,15 @@
 #define MIN_TRIGGER_TIMER (1000)
 
 ATMainWindow_c::ATMainWindow_c( QWidget *vpParent ):
-QMainWindow( vpParent )
+QMainWindow( vpParent ),
+m_iconConnected( QPixmap( ":connected.png" ) ),
+m_iconConnecting( QPixmap( ":connecting.png" ) ),
+m_iconDisconnected( QPixmap( ":disconnected.png" ) )
 {
 	m_pMainWindow = new ATSkeletonWindow(this);
 	setCentralWidget( m_pMainWindow );
 
-	setWindowIcon( QPixmap( ":connected.png" ) );
+	setWindowIcon( m_iconDisconnected );
 	setWindowTitle( QString( "%1 %2" ).arg( APP_NICE_NAME ).arg( APP_VERSION ) );
 
 	InitMenusAndActions();
@@ -45,7 +48,7 @@ void ATMainWindow_c::createTrayIcon()
 
 	m_trayIcon = new QSystemTrayIcon( this );
 	m_trayIcon->setContextMenu( m_trayIconMenu );
-	m_trayIcon->setIcon( QPixmap( ":disconnected.png" ) );
+	m_trayIcon->setIcon( m_iconDisconnected );
 	m_trayIcon->show();
 
 	ATVERIFY( connect( m_trayIcon, SIGNAL(activated(QSystemTrayIcon::ActivationReason)),
@@ -56,7 +59,8 @@ void ATMainWindow_c::createTrayIcon()
 
 void ATMainWindow_c::slotSetTrayIcon( int iIndex )
 {
-	m_trayIcon->setIcon( QPixmap( iIndex ? ":connected.png" : ":disconnected.png" ) );
+	m_trayIcon->setIcon( iIndex ? m_iconConnected : m_iconDisconnected );
+	setWindowIcon( iIndex ? m_iconConnected : m_iconDisconnected );
 }
 
 void ATMainWindow_c::iconActivated(QSystemTrayIcon::ActivationReason reason)
