@@ -2,20 +2,20 @@
 #define ATSKELETONWINDOW_H
 
 #include "pch.h"
-#include "List.h"
 #include "ui_ATSkeleton.h"
 
 class ATSkeletonWindow;
+class Tunnel_c;
 
 class ATTunnelConnector_c : public QObject
 {
 	Q_OBJECT
 
 public:
-	ATTunnelConnector_c( ATSkeletonWindow *pParent, int iTunnelIndex );
+	ATTunnelConnector_c( ATSkeletonWindow *pParent, Tunnel_c *pTunnel );
 
 	ATSkeletonWindow *m_pParent;
-	int m_iTunnelIndex;
+	Tunnel_c *m_pTunnel;
 
 public slots:
 	void slotProcessReadStandardOutput();
@@ -24,7 +24,7 @@ public slots:
 	void slotProcessFinished(int exitCode, QProcess::ExitStatus exitStatus);
 
 signals:
-	void finished(int iTunnelIndex);
+	void finished( Tunnel_c * );
 
 protected:
 	void processPlinkOutput( const char *str );
@@ -34,6 +34,8 @@ class Tunnel_c
 {
 public:
 	Tunnel_c();
+	~Tunnel_c();
+	// Use default copy contructor and assignment operator
 
 	void init();
 	void copyFrom( const Tunnel_c *orig );
@@ -58,11 +60,13 @@ public:
 	ATTunnelConnector_c *pConnector;
 	QString strPassword;
 	int iShouldReconnect;
+	QTreeWidgetItem *twi;
 };
 
 class ATSkeletonWindow : public QWidget
 {
-	Q_OBJECT
+	Q_OBJECT;
+	typedef std::list<Tunnel_c>::iterator TunnelInterator;
 
 public:
 	ATSkeletonWindow(QWidget *parent = 0);
@@ -70,7 +74,7 @@ public:
 
 	void onClose();
 
-	void AddToLog( int iTunnelIndex, const char *format, ... );
+	void AddToLog( Tunnel_c &tunnel, const char *format, ... );
 
 public slots:
 	void slotAddTunnel();
@@ -82,14 +86,14 @@ public slots:
 	void slotTabChanged();
 	void slotConnect();
 	void slotDisconnect();
-	void slotConnectorFinished( int iTunnelIndex );
-	void slotAutoConnect( int iIndex );
+	void slotConnectorFinished( Tunnel_c* );
+	void slotAutoConnect( Tunnel_c* );
 	void slotBrowseKeyFile();
 	void slotItemDoubleClicked(QTreeWidgetItem*);
 
 signals:
 	void signalSetTrayIcon( int iIndex );
-	void signalAutoConnect( int iIndex );
+	void signalAutoConnect( Tunnel_c* );
 
 private:
 	Ui::ATSkeletonWindowClass ui;
@@ -99,9 +103,9 @@ private:
 	void writeSettings();
 	void updateControls();
 
-	void connectTunnel( int iTunnelIndex );
-	void disconnectTunnel( int iTunnelIndex );
-	void connected( int iTunnelIndex );
+	void connectTunnel( Tunnel_c &tunnel );
+	void disconnectTunnel( Tunnel_c &tunnel );
+	void connected( Tunnel_c &tunnel );
 
 	void saveTunnel();
 
@@ -109,15 +113,15 @@ private:
 	bool detectTunnelChange();
 	void confirmSaveTunnel();
 
-	bool askforPassword( int iTunnelIndex );
+	bool askforPassword( Tunnel_c &tunnel );
 
 	void populateEditUIFromStruct( Tunnel_c *t );
 
-	int m_iEditIndex;
+	Tunnel_c *m_pTunnelEdit;
 
-	QTreeWidgetItem *getTreeItemFromTunnelIndex( int iTunnelIndex );
+	Tunnel_c *getTunnelFromTreeItem( const QTreeWidgetItem *twi );
 
-	List_c<Tunnel_c> m_listTunnels;
+	std::list<Tunnel_c> m_listTunnels2;
 
 	friend class ATTunnelConnector_c;
 };

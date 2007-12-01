@@ -19,6 +19,11 @@
 
 #include <assert.h>
 
+// stl
+#include <list>
+#include <algorithm>
+#include <numeric>
+
 // For the about box
 extern const char *APP_VERSION;
 extern const char *APP_DATE;

@@ -12,7 +12,7 @@
 ATSkeletonWindow::ATSkeletonWindow(QWidget *parent)
 : QWidget(parent)
 {
-	m_iEditIndex = -1;
+	m_pTunnelEdit = NULL;
 	m_bDisableChanges = false;
 
 	ui.setupUi(this);
@@ -28,17 +28,15 @@ ATSkeletonWindow::ATSkeletonWindow(QWidget *parent)
 
 	updateControls();
 
-	emit signalAutoConnect(-1); // auto connect all
+	emit signalAutoConnect(NULL); // auto connect all
 }
 
 ATSkeletonWindow::~ATSkeletonWindow()
 {
 	writeSettings();
 
-	for ( int i=0; i<m_listTunnels.Count(); i++ )
-	{
-		slotConnectorFinished( i );
-	}
+	for ( TunnelInterator it = m_listTunnels2.begin(); it != m_listTunnels2.end(); ++it )
+		disconnectTunnel( *it );
 }
 
 void ATSkeletonWindow::wireSignals()
@@ -61,47 +59,47 @@ void ATSkeletonWindow::wireSignals()
 	ATVERIFY( connect( ui.treeTunnels, SIGNAL( itemDoubleClicked(QTreeWidgetItem*,int) ), this, SLOT( slotItemDoubleClicked(QTreeWidgetItem*) ) ) );
 
 	// Connect buttons
-	ATVERIFY( connect( this, SIGNAL( signalAutoConnect(int) ), this, SLOT( slotAutoConnect(int) ), Qt::QueuedConnection ) );
+	ATVERIFY( connect( this, SIGNAL( signalAutoConnect(Tunnel_c*) ), this, SLOT( slotAutoConnect(Tunnel_c*) ), Qt::QueuedConnection ) );
 }
 
 void ATSkeletonWindow::readSettings()
 {
 	QSettings settings( g_strIniFile, QSettings::IniFormat);
 
-	m_listTunnels.Clear();
+	m_listTunnels2.clear();
 	ui.treeTunnels->clear();
 
 	int iCount = settings.value( "NumberOfTunnels", 0 ).toInt();
+
+	Tunnel_c tunnel;
 
 	for ( int i=0; i<iCount; i++ )
 	{
 		QString strGroup = QString( "Tunnel%1" ).arg( i );
 		settings.beginGroup( strGroup );
 
-		Tunnel_c *pt = m_listTunnels.AppendNewInstance();
-		int iIndex = m_listTunnels.Count() - 1;
-
-		pt->strName           = settings.value( "Name" ).toString();
-		pt->strSSHHost        = settings.value( "SSHHost" ).toString();
-		pt->strRemoteHost     = settings.value( "RemoteHost" ).toString();
-		pt->strUsername       = settings.value( "Username" ).toString();
-		pt->strSSHKeyFile     = settings.value( "SSHKeyFile" ).toString();
-		pt->strExtraArguments = settings.value( "ExtraArguments" ).toString();
-		pt->iLocalPort        = settings.value( "LocalPort" ).toInt();
-		pt->iRemotePort       = settings.value( "RemotePort" ).toInt();
-		pt->iDirection        = settings.value( "Direction" ).toInt();
-		pt->bAutoConnect      = settings.value( "AutoConnect" ).toBool();
-		pt->bCompression      = settings.value( "Compression" ).toBool();
-		pt->bDoKeepAlivePing  = settings.value( "DoKeepAlivePing" ).toBool();
-		pt->bAutoReconnect    = settings.value( "AutoReconnect" ).toBool();
-		pt->iSSH1or2          = settings.value( "SSH1or2" ).toInt();
+		tunnel.strName           = settings.value( "Name" ).toString();
+		tunnel.strSSHHost        = settings.value( "SSHHost" ).toString();
+		tunnel.strRemoteHost     = settings.value( "RemoteHost" ).toString();
+		tunnel.strUsername       = settings.value( "Username" ).toString();
+		tunnel.strSSHKeyFile     = settings.value( "SSHKeyFile" ).toString();
+		tunnel.strExtraArguments = settings.value( "ExtraArguments" ).toString();
+		tunnel.iLocalPort        = settings.value( "LocalPort" ).toInt();
+		tunnel.iRemotePort       = settings.value( "RemotePort" ).toInt();
+		tunnel.iDirection        = settings.value( "Direction" ).toInt();
+		tunnel.bAutoConnect      = settings.value( "AutoConnect" ).toBool();
+		tunnel.bCompression      = settings.value( "Compression" ).toBool();
+		tunnel.bDoKeepAlivePing  = settings.value( "DoKeepAlivePing" ).toBool();
+		tunnel.bAutoReconnect    = settings.value( "AutoReconnect" ).toBool();
+		tunnel.iSSH1or2          = settings.value( "SSH1or2" ).toInt();
 
 		settings.endGroup();
 
-		QTreeWidgetItem *twi = new QTreeWidgetItem( ui.treeTunnels );
-		twi->setIcon( 0, QPixmap( ":disconnected.png" ) );
-		twi->setText( 0, pt->strName );
-		twi->setData( 0, Qt::UserRole, iIndex );
+		tunnel.twi = new QTreeWidgetItem( ui.treeTunnels );
+		tunnel.twi->setIcon( 0, QPixmap( ":disconnected.png" ) );
+		tunnel.twi->setText( 0, tunnel.strName );
+
+		m_listTunnels2.push_back( tunnel );
 	}
 
 	if ( ui.treeTunnels->topLevelItemCount() > 0 )
@@ -115,31 +113,32 @@ void ATSkeletonWindow::writeSettings()
 {
 	QSettings settings( g_strIniFile, QSettings::IniFormat);
 
-	settings.setValue( "NumberOfTunnels", m_listTunnels.Count() );
+	settings.setValue( "NumberOfTunnels", m_listTunnels2.size() );
 
-	for ( int i=0; i<m_listTunnels.Count(); i++ )
+	int i=0;
+	for ( TunnelInterator it = m_listTunnels2.begin(); it != m_listTunnels2.end(); ++it )
 	{
 		QString strGroup = QString( "Tunnel%1" ).arg( i );
 		settings.beginGroup( strGroup );
 
-		const Tunnel_c *pt = &m_listTunnels.at( i );
-
-		settings.setValue( "Name", pt->strName );
-		settings.setValue( "SSHHost", pt->strSSHHost );
-		settings.setValue( "LocalPort", pt->iLocalPort );
-		settings.setValue( "RemoteHost", pt->strRemoteHost );
-		settings.setValue( "RemotePort", pt->iRemotePort );
-		settings.setValue( "Username", pt->strUsername );
-		settings.setValue( "SSHKeyFile", pt->strSSHKeyFile );
-		settings.setValue( "Direction", pt->iDirection );
-		settings.setValue( "AutoConnect", pt->bAutoConnect );
-		settings.setValue( "Compression", pt->bCompression );
-		settings.setValue( "DoKeepAlivePing", pt->bDoKeepAlivePing );
-		settings.setValue( "AutoReconnect", pt->bAutoReconnect );
-		settings.setValue( "SSH1or2", pt->iSSH1or2 );
-		settings.setValue( "ExtraArguments", pt->strExtraArguments );
+		settings.setValue( "Name",            it->strName );
+		settings.setValue( "SSHHost",         it->strSSHHost );
+		settings.setValue( "LocalPort",       it->iLocalPort );
+		settings.setValue( "RemoteHost",      it->strRemoteHost );
+		settings.setValue( "RemotePort",      it->iRemotePort );
+		settings.setValue( "Username",        it->strUsername );
+		settings.setValue( "SSHKeyFile",      it->strSSHKeyFile );
+		settings.setValue( "Direction",       it->iDirection );
+		settings.setValue( "AutoConnect",     it->bAutoConnect );
+		settings.setValue( "Compression",     it->bCompression );
+		settings.setValue( "DoKeepAlivePing", it->bDoKeepAlivePing );
+		settings.setValue( "AutoReconnect",   it->bAutoReconnect );
+		settings.setValue( "SSH1or2",         it->iSSH1or2 );
+		settings.setValue( "ExtraArguments",  it->strExtraArguments );
 
 		settings.endGroup();
+
+		i++;
 	}
 
 	settings.sync();
@@ -175,87 +174,73 @@ void ATSkeletonWindow::slotEditTunnel()
 
 void ATSkeletonWindow::slotDeleteTunnel()
 {
-	QTreeWidgetItem *twi = ui.treeTunnels->currentItem();
-	if ( twi == NULL ) return;
+ 	QTreeWidgetItem *twi = ui.treeTunnels->currentItem();
+	ATASSERT( twi );
+ 	if ( twi == NULL ) return;
+ 
+	Tunnel_c *pt = getTunnelFromTreeItem( twi );
+	ATASSERT( pt );
+	if ( pt == NULL ) return;
 
-	QString strQuestion = QString( "Do you want to delete the tunnel \"%1\"?" ).arg( twi->text( 0 ) );
-	QMessageBox::StandardButton iRet = QMessageBox::question( this, APP_NICE_NAME, strQuestion, QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes );
-
-	if ( iRet == QMessageBox::Yes )
-	{
-		m_bDisableChanges = true;
-
-		int iIndex = twi->data( 0, Qt::UserRole ).toInt();
-
-		delete twi;
-		disconnectTunnel( iIndex );
-
-		if ( iIndex >= 0 && iIndex < m_listTunnels.Count() )
-			m_listTunnels.RemoveAt( iIndex );
-
-		// Need to find all tree items that have a bigger index and decrement them
-		for ( int i=0; i<ui.treeTunnels->topLevelItemCount(); i++ )
+ 	QString strQuestion = QString( "Do you want to delete the tunnel \"%1\"?" ).arg( twi->text( 0 ) );
+ 	QMessageBox::StandardButton iRet = QMessageBox::question( this, APP_NICE_NAME, strQuestion, QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes );
+ 
+ 	if ( iRet == QMessageBox::Yes )
+ 	{
+ 		m_bDisableChanges = true;
+ 
+ 		delete twi;
+ 		disconnectTunnel( *pt );
+ 
+		for ( TunnelInterator it = m_listTunnels2.begin(); it != m_listTunnels2.end(); ++it )
 		{
-			QTreeWidgetItem *twi = ui.treeTunnels->topLevelItem( i );
-			if ( twi )
+			if ( it->twi == twi )
 			{
-				int iItemIndex = twi->data( 0, Qt::UserRole ).toInt();
-				if ( iItemIndex > iIndex )
-				{
-					twi->setData( 0, Qt::UserRole, iItemIndex-1 );
-				}
+				m_listTunnels2.erase( it );
+				break;
 			}
 		}
-
-		// Need to find all later tunnel connectors and decrement indices
-		for ( int i=iIndex; i<m_listTunnels.Count(); i++ )
-		{
-			if ( m_listTunnels.at(i).pConnector )
-				m_listTunnels[i].pConnector->m_iTunnelIndex--;
-		}
-	}
+ 	}
 }
 
 void ATSkeletonWindow::slotConnect()
 {
 	QTreeWidgetItem *twi = ui.treeTunnels->currentItem();
+	ATASSERT( twi );
 	if ( twi == NULL ) return;
 
-	int iIndex = twi->data( 0, Qt::UserRole ).toInt();
+	Tunnel_c *pt = getTunnelFromTreeItem( twi );
+	ATASSERT( twi );
 
-	connectTunnel( iIndex );
+	connectTunnel( *pt );
 }
 
 void ATSkeletonWindow::slotDisconnect()
 {
 	QTreeWidgetItem *twi = ui.treeTunnels->currentItem();
+	ATASSERT( twi );
 	if ( twi == NULL ) return;
 
-	int iIndex = twi->data( 0, Qt::UserRole ).toInt();
-	if ( iIndex < 0 || iIndex >= m_listTunnels.Count() ) return;
-
-	Tunnel_c *pt = &m_listTunnels[iIndex];
+	Tunnel_c *pt = getTunnelFromTreeItem( twi );
+	ATASSERT( pt );
 	pt->iShouldReconnect = 0;
 
-	disconnectTunnel( iIndex );
+	disconnectTunnel( *pt );
 }
 
-void ATSkeletonWindow::slotItemDoubleClicked(QTreeWidgetItem *twi)
+void ATSkeletonWindow::slotItemDoubleClicked(QTreeWidgetItem * twi)
 {
 	if ( twi == NULL ) return;
 
 	ui.tabWidget->setCurrentIndex( PAGE_CONNECT );
 
-	int iIndex = twi->data( 0, Qt::UserRole ).toInt();
-	if ( iIndex >= 0 && iIndex < m_listTunnels.Count() )
-	{
-		const Tunnel_c *pt = &m_listTunnels.at(iIndex);
+	const Tunnel_c *pt = getTunnelFromTreeItem( twi );
+	ATASSERT( pt );
 
-		if (pt->pProcess)
-			slotDisconnect();
-		else
-			slotConnect();
-	}
+	if (pt->pProcess)
+		slotDisconnect();
+	else
+		slotConnect();
 }
 
 void ATSkeletonWindow::slotBrowseKeyFile()
@@ -268,180 +253,164 @@ void ATSkeletonWindow::slotBrowseKeyFile()
 	}
 }
 
-void ATSkeletonWindow::slotConnectorFinished( int iTunnelIndex )
+void ATSkeletonWindow::slotConnectorFinished( Tunnel_c *pt )
 {
-	disconnectTunnel( iTunnelIndex );
+	if ( pt ) disconnectTunnel( *pt );
 }
 
-QTreeWidgetItem *ATSkeletonWindow::getTreeItemFromTunnelIndex( int iTunnelIndex )
+Tunnel_c *ATSkeletonWindow::getTunnelFromTreeItem( const QTreeWidgetItem *twi )
 {
-	for ( int i=0; i<ui.treeTunnels->topLevelItemCount(); i++ )
+	if ( twi == NULL ) return NULL;
+
+	for ( TunnelInterator it = m_listTunnels2.begin(); it != m_listTunnels2.end(); ++it )
 	{
-		QTreeWidgetItem *twi = ui.treeTunnels->topLevelItem( i );
-		if ( twi->data( 0, Qt::UserRole ).toInt() == iTunnelIndex )
-			return twi;
+		if ( it->twi == twi )
+			return &(*it);
 	}
 
 	return NULL;
 }
 
-void ATSkeletonWindow::connected( int iTunnelIndex )
+void ATSkeletonWindow::connected( Tunnel_c &tunnel )
 {
-	QTreeWidgetItem *twi = getTreeItemFromTunnelIndex( iTunnelIndex );
-	if ( twi != NULL )
-	{
-		twi->setIcon( 0, QPixmap( ":connected.png" ) );
-		emit signalSetTrayIcon( 1 );
-	}
+ 	if ( tunnel.twi != NULL )
+ 	{
+ 		tunnel.twi->setIcon( 0, QPixmap( ":connected.png" ) );
+ 		emit signalSetTrayIcon( 1 );
+ 	}
+ 
+	tunnel.iShouldReconnect = tunnel.bAutoReconnect ? CONNECTION_RETRIES : 0;
 
-	if ( iTunnelIndex > 0 && iTunnelIndex < m_listTunnels.Count() )
-	{
-		Tunnel_c *pt = &m_listTunnels[iTunnelIndex];
-		pt->iShouldReconnect = pt->bAutoReconnect ? CONNECTION_RETRIES : 0;
-	}
-
-	AddToLog( iTunnelIndex, "Connected." );
+ 	AddToLog( tunnel, "Connected." );
 }
 
-void ATSkeletonWindow::connectTunnel( int iTunnelIndex )
+void ATSkeletonWindow::connectTunnel( Tunnel_c &tunnel )
 {
-	if ( iTunnelIndex < 0 || iTunnelIndex >= m_listTunnels.Count() ) return;
+ 	Tunnel_c *pt = &tunnel;
+ 
+ 	AddToLog( tunnel, "Connecting tunnel %s...", qPrintable( pt->strName ) );
+ 	AddToLog( tunnel, "Host: %s - Tunnel: %d:%s:%d", qPrintable( pt->strSSHHost ), pt->iLocalPort, qPrintable( pt->strRemoteHost ), pt->iRemotePort );
+ 
+ 	if ( pt->strSSHHost.isEmpty() )
+ 	{
+ 		AddToLog( tunnel, "Error: Tunnel %s has no host, please check the settings.", qPrintable( pt->strName ) );
+ 		return;
+ 	}
+ 
+ #ifdef WIN32
+ 	QString strPlink = "plink.exe";
+ 
+ 	// Check that the executable is found
+ 	{
+ 		QDir dir( argv0 );
+ 		dir.cdUp();
+ 		if ( !dir.exists( strPlink ) )
+ 		{
+ 			const char *ptr = argv0, *ptr2 = argv0;
+ 			while ( *ptr2 ) { if ( *ptr2 == '\\' ) ptr = ptr2+1; ptr2++; }
+ 			AddToLog( tunnel, "Error: Could not find %s, please check that it is in the same directory as %s.", qPrintable( strPlink ), ptr );
+ 			return;
+ 		}
+ 	}
+ #else
+ 	QString strPlink = "ssh";
+ #endif
+ 
+ 	if ( pt->pProcess != NULL ) return; // already connected?
 
-	Tunnel_c *pt = &m_listTunnels[iTunnelIndex];
-
-	AddToLog( iTunnelIndex, "Connecting tunnel %s...", qPrintable( pt->strName ) );
-	AddToLog( iTunnelIndex, "Host: %s - Tunnel: %d:%s:%d", qPrintable( pt->strSSHHost ), pt->iLocalPort, qPrintable( pt->strRemoteHost ), pt->iRemotePort );
-
-	if ( pt->strSSHHost.isEmpty() )
-	{
-		AddToLog( iTunnelIndex, "Error: Tunnel %s has no host, please check the settings.", qPrintable( pt->strName ) );
-		return;
-	}
-
-#ifdef WIN32
-	QString strPlink = "plink.exe";
-
-	// Check that the executable is found
-	{
-		QDir dir( argv0 );
-		dir.cdUp();
-		if ( !dir.exists( strPlink ) )
-	//	QFile file(strPlink);
-	//	if ( !file.exists() )
-		{
-			const char *ptr = argv0, *ptr2 = argv0;
-			while ( *ptr2 ) { if ( *ptr2 == '\\' ) ptr = ptr2+1; ptr2++; }
-			AddToLog( iTunnelIndex, "Error: Could not find %s, please check that it is in the same directory as %s.", qPrintable( strPlink ), ptr );
-			return;
-		}
-	}
-#else
-	QString strPlink = "ssh";
-#endif
-
-	if ( pt->pProcess != NULL ) return; // already connected?
-
-	QTreeWidgetItem *twi = getTreeItemFromTunnelIndex( iTunnelIndex );
-	if ( twi ) twi->setIcon( 0, QPixmap( ":connecting.png" ) );
-
-	ATASSERT( pt->pConnector == NULL );
-	pt->pConnector = new ATTunnelConnector_c( this, iTunnelIndex );
-
-	pt->pProcess = new QProcess;
-	pt->pProcess->setProcessChannelMode( QProcess::MergedChannels );
-
-	QString strCommand;
-
-	strCommand += strPlink + " ";
-	strCommand += "-v ";
-
-#ifdef _WIN32
-	QStringList strListSSHHost = pt->strSSHHost.split( ':', QString::SkipEmptyParts );
-	if ( strListSSHHost.count() == 1 ) strListSSHHost << "22";
-
-	strCommand += strListSSHHost.at(0) + " -P " + strListSSHHost.at(1) + " ";
-#else
-	strCommand += pt->strSSHHost + " ";
-#endif
-
-	if ( !pt->strUsername.isEmpty() ) strCommand += QString( "-l %1 " ).arg( pt->strUsername );
-
-	if ( pt->bCompression ) strCommand += "-C ";
-
-	strCommand += ( pt->iSSH1or2 == 1 ) ? "-1 " : "-2 ";
-
-	if ( pt->iDirection == 0 ) // Local -> Remote
-	{
-		IF_NWIN32( strCommand += "-g " );
-		strCommand += QString( "-L %1:%2:%3 " ).arg( pt->iLocalPort ).arg( pt->strRemoteHost).arg( pt->iRemotePort );		
-	}
-	else // Remote -> Local
-	{
-		strCommand += QString( "-R %1:%2:%3 " ).arg( pt->iLocalPort ).arg( pt->strRemoteHost).arg( pt->iRemotePort );		
-	}
-
-	if ( !pt->strSSHKeyFile.isEmpty() ) strCommand += QString( "-i %1 " ).arg( pt->strSSHKeyFile );
-
-	strCommand += pt->strExtraArguments;
-
-	ATVERIFY( connect( pt->pProcess, SIGNAL( readyReadStandardOutput() ), pt->pConnector, SLOT( slotProcessReadStandardOutput() ) ) );
-	ATVERIFY( connect( pt->pProcess, SIGNAL( readyReadStandardError() ), pt->pConnector, SLOT( slotProcessReadStandardError() ) ) );
-	ATVERIFY( connect( pt->pProcess, SIGNAL( error(QProcess::ProcessError) ), pt->pConnector, SLOT( slotProcessError(QProcess::ProcessError) ) ) );
-	ATVERIFY( connect( pt->pProcess, SIGNAL( finished(int, QProcess::ExitStatus) ), pt->pConnector, SLOT( slotProcessFinished(int, QProcess::ExitStatus) ) ) );
-	ATVERIFY( connect( pt->pConnector, SIGNAL( finished(int) ), this, SLOT( slotConnectorFinished(int) ), Qt::QueuedConnection ) );
-
-	AddToLog( iTunnelIndex, "%s", qPrintable( strCommand ) );
-
-	pt->pProcess->start( strCommand );
+	if ( tunnel.twi ) tunnel.twi->setIcon( 0, QPixmap( ":connecting.png" ) );
+  	//QTreeWidgetItem *twi = getTreeItemFromTunnelIndex( iTunnelIndex );
+  	//if ( twi ) twi->setIcon( 0, QPixmap( ":connecting.png" ) );
+ 
+ 	ATASSERT( pt->pConnector == NULL );
+ 	pt->pConnector = new ATTunnelConnector_c( this, &tunnel );
+ 
+ 	pt->pProcess = new QProcess;
+ 	pt->pProcess->setProcessChannelMode( QProcess::MergedChannels );
+ 
+ 	QString strCommand;
+ 
+ 	strCommand += strPlink + " ";
+ 	strCommand += "-v ";
+ 
+ #ifdef _WIN32
+ 	QStringList strListSSHHost = pt->strSSHHost.split( ':', QString::SkipEmptyParts );
+ 	if ( strListSSHHost.count() == 1 ) strListSSHHost << "22";
+ 
+ 	strCommand += strListSSHHost.at(0) + " -P " + strListSSHHost.at(1) + " ";
+ #else
+ 	strCommand += pt->strSSHHost + " ";
+ #endif
+ 
+ 	if ( !pt->strUsername.isEmpty() ) strCommand += QString( "-l %1 " ).arg( pt->strUsername );
+ 
+ 	if ( pt->bCompression ) strCommand += "-C ";
+ 
+ 	strCommand += ( pt->iSSH1or2 == 1 ) ? "-1 " : "-2 ";
+ 
+ 	if ( pt->iDirection == 0 ) // Local -> Remote
+ 	{
+ 		IF_NWIN32( strCommand += "-g " );
+ 		strCommand += QString( "-L %1:%2:%3 " ).arg( pt->iLocalPort ).arg( pt->strRemoteHost).arg( pt->iRemotePort );		
+ 	}
+ 	else // Remote -> Local
+ 	{
+ 		strCommand += QString( "-R %1:%2:%3 " ).arg( pt->iLocalPort ).arg( pt->strRemoteHost).arg( pt->iRemotePort );		
+ 	}
+ 
+ 	if ( !pt->strSSHKeyFile.isEmpty() ) strCommand += QString( "-i %1 " ).arg( pt->strSSHKeyFile );
+ 
+ 	strCommand += pt->strExtraArguments;
+ 
+ 	ATVERIFY( connect( pt->pProcess, SIGNAL( readyReadStandardOutput() ), pt->pConnector, SLOT( slotProcessReadStandardOutput() ) ) );
+ 	ATVERIFY( connect( pt->pProcess, SIGNAL( readyReadStandardError() ), pt->pConnector, SLOT( slotProcessReadStandardError() ) ) );
+ 	ATVERIFY( connect( pt->pProcess, SIGNAL( error(QProcess::ProcessError) ), pt->pConnector, SLOT( slotProcessError(QProcess::ProcessError) ) ) );
+ 	ATVERIFY( connect( pt->pProcess, SIGNAL( finished(int, QProcess::ExitStatus) ), pt->pConnector, SLOT( slotProcessFinished(int, QProcess::ExitStatus) ) ) );
+ 	ATVERIFY( connect( pt->pConnector, SIGNAL( finished(Tunnel_c*) ), this, SLOT( slotConnectorFinished(Tunnel_c*) ), Qt::QueuedConnection ) );
+ 
+ 	AddToLog( tunnel, "%s", qPrintable( strCommand ) );
+ 
+ 	pt->pProcess->start( strCommand );
 }
 
-void ATSkeletonWindow::disconnectTunnel( int iTunnelIndex )
+void ATSkeletonWindow::disconnectTunnel( Tunnel_c &tunnel )
 {
-	if ( iTunnelIndex >=0 && iTunnelIndex < m_listTunnels.Count() )
+	Tunnel_c *pt = &tunnel;
+
+	if ( pt->pProcess == NULL ) return; // not connected?
+
+	AddToLog( tunnel, "Disconnecting tunnel %s...", qPrintable( pt->strName ) );
+	qApp->processEvents();
+
+	pt->pProcess->kill();
+	pt->pProcess->waitForFinished( WAIT_FOR_FINISHED_TIMEOUT );
+	delete pt->pProcess;
+	pt->pProcess = NULL;
+
+	delete pt->pConnector;
+	pt->pConnector = NULL;
+
+	AddToLog( tunnel, "Disconnected." );
+
+	if ( tunnel.twi ) tunnel.twi->setIcon( 0, QPixmap( ":disconnected.png" ) );
+
+	int iConnectedCount = 0;
+
+	for ( TunnelInterator it = m_listTunnels2.begin(); it != m_listTunnels2.end(); ++it )
+		if ( it->pProcess ) iConnectedCount++;
+
+	if ( iConnectedCount == 0 )
+		emit signalSetTrayIcon( 0 );
+
+	if ( pt->iShouldReconnect > 0 )
 	{
-		Tunnel_c *pt = &m_listTunnels[iTunnelIndex];
-
-		if ( pt->pProcess == NULL ) return; // not connected?
-
-		AddToLog( iTunnelIndex, "Disconnecting tunnel %s...", qPrintable( pt->strName ) );
-		qApp->processEvents();
-
-		pt->pProcess->kill();
-		pt->pProcess->waitForFinished( WAIT_FOR_FINISHED_TIMEOUT );
-		delete pt->pProcess;
-		pt->pProcess = NULL;
-
-		delete pt->pConnector;
-		pt->pConnector = NULL;
-
-		AddToLog( iTunnelIndex, "Disconnected." );
-
-		for ( int i=0; i<ui.treeTunnels->topLevelItemCount(); i++ )
-		{
-			QTreeWidgetItem *twi = ui.treeTunnels->topLevelItem( i );
-			if ( twi->data( 0, Qt::UserRole ).toInt() == iTunnelIndex )
-				twi->setIcon( 0, QPixmap( ":disconnected.png" ) );
-		}
-
-		int iConnectedCount = 0;
-		for ( int i=0; i<m_listTunnels.Count(); i++ )
-		{
-			if ( m_listTunnels.at(i).pProcess != NULL )
-				iConnectedCount++;
-		}
-		if ( iConnectedCount == 0 )
-			emit signalSetTrayIcon( 0 );
-
-		if ( pt->iShouldReconnect > 0 )
-		{
-			AddToLog( iTunnelIndex, "Connection lost, reconnecting... (%d)", pt->iShouldReconnect );
-			pt->iShouldReconnect--;
-			emit signalAutoConnect( iTunnelIndex );
-		}
-		else
-		{
-			AddToLog( iTunnelIndex, "Connection lost, giving up." );
-		}
+		AddToLog( tunnel, "Connection lost, reconnecting... (%d)", pt->iShouldReconnect );
+		pt->iShouldReconnect--;
+		emit signalAutoConnect( &tunnel );
+	}
+	else
+	{
+		AddToLog( tunnel, "Connection lost, giving up." );
 	}
 }
 
@@ -454,108 +423,98 @@ void ATSkeletonWindow::slotSave()
 
 void ATSkeletonWindow::saveTunnel()
 {
-	Tunnel_c *pt;
-
-	if ( m_iEditIndex >= 0 && m_iEditIndex < m_listTunnels.Count() )
-	{
-		pt = &m_listTunnels[m_iEditIndex];
-	}
-	else
-	{
-		pt = new Tunnel_c;
-		pt->init();
-	}
-		
-
-	pt->strName = ui.editTunnelName->text();
-	pt->strSSHHost = ui.editSSHHost->text();
-	pt->iLocalPort = ui.editLocalPort->text().toInt();
-	pt->strRemoteHost = ui.editRemoteHost->text();
-	pt->iRemotePort = ui.editRemotePort->text().toInt();
-	pt->strExtraArguments = ui.editExtraArguments->text();
-	pt->strUsername = ui.editUsername->text();
-	pt->strSSHKeyFile = ui.editSSHKeyFile->text();
-	pt->iDirection = ui.comboDirection->currentIndex();
-	pt->bAutoConnect = ui.checkAutoConnect->isChecked();
-	pt->bCompression = ui.checkCompression->isChecked();
-	pt->bDoKeepAlivePing = ui.checkDoKeepAlivePing->isChecked();
-	pt->bAutoReconnect = ui.checkAutoReconnect->isChecked();
-	pt->iSSH1or2 = ui.radioSSH1->isChecked() ? 1 : 2;
-
-	if ( m_iEditIndex < 0 || m_iEditIndex >= m_listTunnels.Count() )
-	{
-		slotAddTunnel();
-		m_bDisableChanges = true;
-		qApp->processEvents();
-	}
-
-	if ( m_iEditIndex >= 0 && m_iEditIndex < m_listTunnels.Count() )
-	{
-		m_listTunnels[m_iEditIndex] = *pt;
-
-		writeSettings();
-
-		QTreeWidgetItem *twi = getTreeItemFromTunnelIndex( m_iEditIndex );
-		if ( twi != NULL ) twi->setText( 0, pt->strName );
-		slotSelectTunnel();
-		qApp->processEvents();
-		m_bDisableChanges = false;
-	}
+ 	Tunnel_c *pt;
+ 
+ 	if ( m_pTunnelEdit ) pt = m_pTunnelEdit;
+ 	else pt = new Tunnel_c;
+  
+ 	pt->strName = ui.editTunnelName->text();
+ 	pt->strSSHHost = ui.editSSHHost->text();
+ 	pt->iLocalPort = ui.editLocalPort->text().toInt();
+ 	pt->strRemoteHost = ui.editRemoteHost->text();
+ 	pt->iRemotePort = ui.editRemotePort->text().toInt();
+ 	pt->strExtraArguments = ui.editExtraArguments->text();
+ 	pt->strUsername = ui.editUsername->text();
+ 	pt->strSSHKeyFile = ui.editSSHKeyFile->text();
+ 	pt->iDirection = ui.comboDirection->currentIndex();
+ 	pt->bAutoConnect = ui.checkAutoConnect->isChecked();
+ 	pt->bCompression = ui.checkCompression->isChecked();
+ 	pt->bDoKeepAlivePing = ui.checkDoKeepAlivePing->isChecked();
+ 	pt->bAutoReconnect = ui.checkAutoReconnect->isChecked();
+ 	pt->iSSH1or2 = ui.radioSSH1->isChecked() ? 1 : 2;
+ 
+ 	if ( m_pTunnelEdit == NULL )
+ 	{
+ 		slotAddTunnel();
+ 		m_bDisableChanges = true;
+ 		qApp->processEvents();
+ 	}
+ 
+ 	if ( m_pTunnelEdit )
+ 	{
+ 		//m_listTunnels[m_iEditIndex] = *pt;
+ 
+ 		writeSettings();
+ 
+ 		if ( m_pTunnelEdit->twi != NULL ) m_pTunnelEdit->twi->setText( 0, pt->strName );
+ 		slotSelectTunnel();
+ 		qApp->processEvents();
+ 		m_bDisableChanges = false;
+ 	}
 }
 
 void ATSkeletonWindow::slotAddTunnel()
 {
-	Tunnel_c *pt = m_listTunnels.AppendNewInstance();
-	pt->init();
+ 	Tunnel_c tunnel;
+ 
+ 	QTreeWidgetItem *twi = new QTreeWidgetItem( ui.treeTunnels );
+ 	twi->setText( 0, tunnel.strName );
+ 	twi->setIcon( 0, QPixmap( ":disconnected.png" ) );
+	tunnel.twi = twi;
 
-	int iIndex = m_listTunnels.Count() - 1;
+	m_listTunnels2.push_back( tunnel );
 
-	QTreeWidgetItem *twi = new QTreeWidgetItem( ui.treeTunnels );
-	twi->setText( 0, pt->strName );
-	twi->setIcon( 0, QPixmap( ":disconnected.png" ) );
-	twi->setData( 0, Qt::UserRole, iIndex );
-
-	ui.treeTunnels->setCurrentItem( twi );
-
-	ui.tabWidget->setCurrentIndex( PAGE_EDIT );
-	ui.editTunnelName->setFocus();
-	qApp->processEvents();
-	ui.editTunnelName->selectAll();
+ 	ui.treeTunnels->setCurrentItem( twi );
+ 
+ 	ui.tabWidget->setCurrentIndex( PAGE_EDIT );
+ 	ui.editTunnelName->setFocus();
+ 	qApp->processEvents();
+ 	ui.editTunnelName->selectAll();
 }
 
 void ATSkeletonWindow::slotDuplicateTunnel()
 {
-	QTreeWidgetItem *twi = ui.treeTunnels->currentItem();
+ 	QTreeWidgetItem *twi = ui.treeTunnels->currentItem();
+	ATASSERT( twi );
 	if ( twi == NULL ) return;
+ 
+	Tunnel_c *pt = getTunnelFromTreeItem( twi );
+	ATASSERT( pt );
+	if ( pt == NULL ) return;
 
-	int iCurrentIndex = twi->data( 0, Qt::UserRole ).toInt();
-	if ( iCurrentIndex < 0 || iCurrentIndex >= m_listTunnels.Count() ) return;
+	Tunnel_c tunnel;
+	tunnel.copyFrom( pt );
 
-	const Tunnel_c *orig = &m_listTunnels.at( iCurrentIndex );
+ 	twi = new QTreeWidgetItem( ui.treeTunnels );
+ 	twi->setText( 0, tunnel.strName );
+ 	twi->setIcon( 0, QPixmap( ":disconnected.png" ) );
+	tunnel.twi = twi;
 
-	Tunnel_c *pt = m_listTunnels.AppendNewInstance();
-	pt->copyFrom( orig );
+	m_listTunnels2.push_back( tunnel );
 
-	int iIndex = m_listTunnels.Count() - 1;
-
-	twi = new QTreeWidgetItem( ui.treeTunnels );
-	twi->setText( 0, pt->strName );
-	twi->setIcon( 0, QPixmap( ":disconnected.png" ) );
-	twi->setData( 0, Qt::UserRole, iIndex );
-
-	ui.treeTunnels->setCurrentItem( twi );
-
-	ui.tabWidget->setCurrentIndex( PAGE_EDIT );
-	ui.editTunnelName->setFocus();
-	qApp->processEvents();
-	ui.editTunnelName->selectAll();
+ 	ui.treeTunnels->setCurrentItem( twi );
+ 
+ 	ui.tabWidget->setCurrentIndex( PAGE_EDIT );
+ 	ui.editTunnelName->setFocus();
+ 	qApp->processEvents();
+ 	ui.editTunnelName->selectAll();
 }
 
 void ATSkeletonWindow::slotSelectTunnel()
 {
 	if ( detectTunnelChange() ) confirmSaveTunnel();
 
-	m_iEditIndex = -1;
+	m_pTunnelEdit = NULL;
 
 	QTreeWidgetItem *twi = ui.treeTunnels->currentItem();
 	if ( twi == NULL )
@@ -564,14 +523,15 @@ void ATSkeletonWindow::slotSelectTunnel()
 		return;
 	}
 
-	int iIndex = twi->data( 0, Qt::UserRole ).toInt();
-	if ( iIndex >= 0 && iIndex < m_listTunnels.Count() )
+	for ( TunnelInterator it = m_listTunnels2.begin(); it != m_listTunnels2.end(); ++it )
 	{
-		Tunnel_c *pt = &m_listTunnels[iIndex];
+		if ( it->twi == twi )
+		{
+			populateEditUIFromStruct( &(*it) );
 
-		populateEditUIFromStruct( pt );
-
-		m_iEditIndex = iIndex;
+			// Must set it only after calling populateEditUIFromStruct
+			m_pTunnelEdit = &(*it);
+		}
 	}
 
 	updateControls();
@@ -629,45 +589,43 @@ void ATSkeletonWindow::populateEditUIFromStruct( Tunnel_c *pt )
 
 bool ATSkeletonWindow::detectTunnelChange()
 {
-	if ( m_bDisableChanges ) return false;
-
-	if ( m_iEditIndex < 0 || m_iEditIndex >= m_listTunnels.Count() ) return false;
-	const Tunnel_c *pt = &m_listTunnels.at( m_iEditIndex );
-
-	if ( ui.editTunnelName->text() != pt->strName ) return true;
-	if ( ui.editSSHHost->text() != pt->strSSHHost ) return true;
-	if ( ui.editLocalPort->text().toInt() != pt->iLocalPort ) return true;
-	if ( ui.editRemoteHost->text() != pt->strRemoteHost ) return true;
-	if ( ui.editRemotePort->text().toInt() != pt->iRemotePort ) return true;
-	if ( ui.editExtraArguments->text() != pt->strExtraArguments ) return true;
-	if ( ui.editUsername->text() != pt->strUsername ) return true;
-	if ( ui.editSSHKeyFile->text() != pt->strSSHKeyFile ) return true;
-	if ( ui.comboDirection->currentIndex() != pt->iDirection ) return true;
-	if ( ui.checkAutoConnect->isChecked() != pt->bAutoConnect ) return true;
-	if ( ui.checkCompression->isChecked() != pt->bCompression ) return true;
-	if ( ui.checkDoKeepAlivePing->isChecked() != pt->bDoKeepAlivePing ) return true;
-	if ( ui.checkAutoReconnect->isChecked() != pt->bAutoReconnect ) return true;
-	if ( ui.radioSSH1->isChecked() != ( pt->iSSH1or2 == 1 ) ) return true;
-	if ( ui.radioSSH2->isChecked() != ( pt->iSSH1or2 != 1 ) ) return true;
+ 	if ( m_bDisableChanges ) return false;
+ 
+ 	if ( m_pTunnelEdit == NULL ) return false;
+ 	const Tunnel_c *pt = m_pTunnelEdit;
+ 
+ 	if ( ui.editTunnelName->text()				!= pt->strName				) return true;
+ 	if ( ui.editSSHHost->text()					!= pt->strSSHHost			) return true;
+ 	if ( ui.editLocalPort->text().toInt()		!= pt->iLocalPort			) return true;
+ 	if ( ui.editRemoteHost->text()				!= pt->strRemoteHost		) return true;
+ 	if ( ui.editRemotePort->text().toInt()		!= pt->iRemotePort			) return true;
+ 	if ( ui.editExtraArguments->text()			!= pt->strExtraArguments	) return true;
+ 	if ( ui.editUsername->text()				!= pt->strUsername			) return true;
+ 	if ( ui.editSSHKeyFile->text()				!= pt->strSSHKeyFile		) return true;
+ 	if ( ui.comboDirection->currentIndex()		!= pt->iDirection			) return true;
+ 	if ( ui.checkAutoConnect->isChecked()		!= pt->bAutoConnect			) return true;
+ 	if ( ui.checkCompression->isChecked()		!= pt->bCompression			) return true;
+ 	if ( ui.checkDoKeepAlivePing->isChecked()	!= pt->bDoKeepAlivePing		) return true;
+ 	if ( ui.checkAutoReconnect->isChecked()		!= pt->bAutoReconnect		) return true;
+ 	if ( ui.radioSSH1->isChecked()				!= ( pt->iSSH1or2 == 1 )	) return true;
+ 	if ( ui.radioSSH2->isChecked()				!= ( pt->iSSH1or2 != 1 )	) return true;
 
 	return false;
 }
 
 void ATSkeletonWindow::confirmSaveTunnel()
 {
-	QMessageBox::StandardButton iRet = QMessageBox::question( this, APP_NICE_NAME, "Do you want to save the tunnel changes?", QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes );
-
-	if ( iRet == QMessageBox::Yes )
-	{
-		saveTunnel();
-	}
+ 	QMessageBox::StandardButton iRet = QMessageBox::question( this, APP_NICE_NAME, "Do you want to save the tunnel changes?", QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes );
+ 
+ 	if ( iRet == QMessageBox::Yes )
+ 	{
+ 		saveTunnel();
+ 	}
 }
 
-bool ATSkeletonWindow::askforPassword( int iTunnelIndex )
+bool ATSkeletonWindow::askforPassword( Tunnel_c &tunnel )
 {
-	if ( iTunnelIndex < 0 || iTunnelIndex >= m_listTunnels.Count() ) return INVALID_PASSWORD;
-
-	Tunnel_c *pt = &m_listTunnels[iTunnelIndex];
+	Tunnel_c *pt = &tunnel;
 
 	// Early out if the user has already provided a password.
 	if ( pt->strPassword != INVALID_PASSWORD )
@@ -724,60 +682,57 @@ static int safe_vsnprintf(char *buffer, size_t count, const char *format, va_lis
 	return nReturn;
 }
 
-void ATSkeletonWindow::AddToLog( int iTunnelIndex, const char *format, ... )
+// void ATSkeletonWindow::AddToLog( int iTunnelIndex, const char *format, ... )
+void ATSkeletonWindow::AddToLog( Tunnel_c &tunnel, const char *format, ... )
 {
-	if ( iTunnelIndex < 0 || iTunnelIndex >= m_listTunnels.Count() ) return;
-
-	char buffer[8096];
-
-	va_list argptr;
-	va_start(argptr, format);
-
-	safe_vsnprintf(buffer, sizeof(buffer), format, argptr);
-
-	va_end(argptr);
-
-	QString str( buffer );
-	str.replace( '\n', "<br>" );
-
-	Tunnel_c *pt = &m_listTunnels[iTunnelIndex];
+ 	char buffer[8096];
+ 
+ 	va_list argptr;
+ 	va_start(argptr, format);
+ 
+ 	safe_vsnprintf(buffer, sizeof(buffer), format, argptr);
+ 
+ 	va_end(argptr);
+ 
+ 	QString str( buffer );
+ 	str.replace( '\n', "<br>" );
+ 
+ 	//Tunnel_c *pt = &m_listTunnels[iTunnelIndex];
+	Tunnel_c *pt = &tunnel;
 	pt->byteLog.append( str );
-	pt->byteLog.append( "<br>" );
-
-	QTreeWidgetItem *twi = ui.treeTunnels->currentItem();
-	if ( twi != NULL ) 
-		if ( twi->data( 0, Qt::UserRole ).toInt() != iTunnelIndex )
-			twi = NULL;
-
-	if ( pt->byteLog.size() > (MAX_BUFFER_SIZE*2) )
-	{
-		pt->byteLog = pt->byteLog.right( MAX_BUFFER_SIZE );
-		if ( twi != NULL )
-		{
-			ui.textBrowser->setHtml( pt->byteLog );
-			ui.textBrowser->verticalScrollBar()->setValue( ui.textBrowser->verticalScrollBar()->maximum() );
-		}
-	}
-
-	if ( twi != NULL ) ui.textBrowser->append( str );
+ 	pt->byteLog.append( "<br>" );
+ 
+ 	QTreeWidgetItem *twi = ui.treeTunnels->currentItem();
+ 	if ( ( twi != NULL ) && ( twi != tunnel.twi ) )
+ 		twi = NULL;
+ 
+ 	if ( pt->byteLog.size() > (MAX_BUFFER_SIZE*2) )
+ 	{
+ 		pt->byteLog = pt->byteLog.right( MAX_BUFFER_SIZE );
+ 		if ( twi != NULL )
+ 		{
+ 			ui.textBrowser->setHtml( pt->byteLog );
+ 			ui.textBrowser->verticalScrollBar()->setValue( ui.textBrowser->verticalScrollBar()->maximum() );
+ 		}
+ 	}
+ 
+ 	if ( twi != NULL ) ui.textBrowser->append( str );
 }
 
-void ATSkeletonWindow::slotAutoConnect( int iTunnelIndex )
+void ATSkeletonWindow::slotAutoConnect( Tunnel_c *pt )
 {
 	// If it's a valid index, auto connect it, otherwise auto connect all that were ticked in the settings.
-	if ( iTunnelIndex >= 0 && iTunnelIndex < m_listTunnels.Count() )
+	if ( pt )
 	{
-		connectTunnel( iTunnelIndex );
-
+		connectTunnel( *pt );
 		return;
 	}
 
-	for ( int i=0; i<m_listTunnels.Count(); i++ )
+	for ( TunnelInterator it = m_listTunnels2.begin(); it != m_listTunnels2.end(); ++it )
 	{
-		const Tunnel_c *pt = &m_listTunnels.at(i);
-		if ( pt->bAutoConnect )
+		if ( it->bAutoConnect )
 		{
-			connectTunnel( i );
+			connectTunnel( *it );
 		}
 	}
 }
@@ -793,6 +748,16 @@ Tunnel_c::Tunnel_c()
 	pConnector = NULL;
 	strPassword = INVALID_PASSWORD;
 	iShouldReconnect = 0;
+	twi = NULL;
+
+	init();
+}
+
+Tunnel_c::~Tunnel_c()
+{
+	// The process should be terminated before a tunnel is destroyed
+	ATASSERT( pProcess == NULL );
+	ATASSERT( pConnector == NULL );
 }
 
 void Tunnel_c::init()
@@ -834,10 +799,12 @@ void Tunnel_c::copyFrom( const Tunnel_c *orig )
 
 // ATTunnelConnector_c
 
-ATTunnelConnector_c::ATTunnelConnector_c( ATSkeletonWindow *pParent, int iTunnelIndex ) : QObject(),
+ATTunnelConnector_c::ATTunnelConnector_c( ATSkeletonWindow *pParent, Tunnel_c *pTunnel ) : QObject(),
 m_pParent( pParent ),
-m_iTunnelIndex( iTunnelIndex )
+m_pTunnel( pTunnel )
 {
+	ATASSERT( m_pParent );
+	ATASSERT( m_pTunnel );
 }
 
 #ifndef _WIN32
@@ -847,9 +814,9 @@ m_iTunnelIndex( iTunnelIndex )
 void ATTunnelConnector_c::slotProcessReadStandardOutput()
 {
 	ATASSERT( m_pParent );
-	ATASSERT( m_iTunnelIndex >= 0 && m_iTunnelIndex < m_pParent->m_listTunnels.Count() );
+	ATASSERT( m_pTunnel );
 
-	Tunnel_c *pt = &m_pParent->m_listTunnels[m_iTunnelIndex];
+	Tunnel_c *pt = m_pTunnel;
 	ATASSERT( pt );
 
 	QByteArray b = pt->pProcess->readAllStandardOutput();
@@ -861,20 +828,18 @@ void ATTunnelConnector_c::slotProcessReadStandardOutput()
 
 	while ( ptr )
 	{
-		m_pParent->AddToLog( m_iTunnelIndex, "1> %s", ptr );
+		m_pParent->AddToLog( *pt, "1> %s", ptr );
 		processPlinkOutput( ptr );
 		ptr = strtok_s( NULL, "\r\n", &context );
 	}
-
-//	m_pParent->AddToLog( m_iTunnelIndex, b );
 }
 
 void ATTunnelConnector_c::slotProcessReadStandardError()
 {
 	ATASSERT( m_pParent );
-	ATASSERT( m_iTunnelIndex >= 0 && m_iTunnelIndex < m_pParent->m_listTunnels.Count() );
+	ATASSERT( m_pTunnel );
 
-	Tunnel_c *pt = &m_pParent->m_listTunnels[m_iTunnelIndex];
+	Tunnel_c *pt = m_pTunnel;
 	ATASSERT( pt );
 
 	QByteArray b = pt->pProcess->readAllStandardError();
@@ -886,38 +851,36 @@ void ATTunnelConnector_c::slotProcessReadStandardError()
 
 	while ( ptr )
 	{
-		m_pParent->AddToLog( m_iTunnelIndex, "2> %s", ptr );
+		m_pParent->AddToLog( *pt, "2> %s", ptr );
 		processPlinkOutput( ptr );
 		ptr = strtok_s( NULL, "\r\n", &context );
 	}
-
-	//m_pParent->AddToLog( m_iTunnelIndex, b );
 }
 
 void ATTunnelConnector_c::slotProcessError(QProcess::ProcessError error)
 {
 	ATASSERT( m_pParent );
-	ATASSERT( m_iTunnelIndex >= 0 && m_iTunnelIndex < m_pParent->m_listTunnels.Count() );
+	ATASSERT( m_pTunnel );
 
-	Tunnel_c *pt = &m_pParent->m_listTunnels[m_iTunnelIndex];
+	Tunnel_c *pt = m_pTunnel;
 	ATASSERT( pt );
 
-	m_pParent->AddToLog( m_iTunnelIndex, "Process error: %d", error );
+	m_pParent->AddToLog( *pt, "Process error: %d", error );
 	
-	emit finished( m_iTunnelIndex );
+	emit finished( pt );
 }
 
 void ATTunnelConnector_c::slotProcessFinished(int exitCode, QProcess::ExitStatus /*exitStatus*/)
 {
 	ATASSERT( m_pParent );
-	ATASSERT( m_iTunnelIndex >= 0 && m_iTunnelIndex < m_pParent->m_listTunnels.Count() );
+	ATASSERT( m_pTunnel );
 
-	Tunnel_c *pt = &m_pParent->m_listTunnels[m_iTunnelIndex];
+	Tunnel_c *pt = m_pTunnel;
 	ATASSERT( pt );
 
-	m_pParent->AddToLog( m_iTunnelIndex, "Process exit: %d", exitCode );
+	m_pParent->AddToLog( *pt, "Process exit: %d", exitCode );
 
-	emit finished( m_iTunnelIndex );
+	emit finished( pt );
 }
 
 void ATTunnelConnector_c::processPlinkOutput( const char *str )
@@ -926,49 +889,40 @@ void ATTunnelConnector_c::processPlinkOutput( const char *str )
 
 	if ( strstr( str, "assword:" ) )
 	{
-		if ( m_iTunnelIndex >= 0 && m_iTunnelIndex <= m_pParent->m_listTunnels.Count() )
+		if ( m_pTunnel )
 		{
-			const Tunnel_c *pt = &m_pParent->m_listTunnels.at( m_iTunnelIndex );
-			if ( !m_pParent->askforPassword( m_iTunnelIndex ) )
+			if ( !m_pParent->askforPassword( *m_pTunnel ) )
 			{
-				emit finished( m_iTunnelIndex );
+				emit finished( m_pTunnel );
 			}
-			else if ( pt->pProcess )
+			else if ( m_pTunnel->pProcess )
 			{
-				QString strStarPassword( pt->strPassword );
+				QString strStarPassword( m_pTunnel->strPassword );
 				for ( int i=0; i<strStarPassword.count(); i++ )
 					strStarPassword[i] = '*';
-				m_pParent->AddToLog( m_iTunnelIndex, "Sent password: %s", qPrintable( strStarPassword ) );
-				pt->pProcess->write( qPrintable( pt->strPassword + "\r\n" ) );
+				m_pParent->AddToLog( *m_pTunnel, "Sent password: %s", qPrintable( strStarPassword ) );
+				m_pTunnel->pProcess->write( qPrintable( m_pTunnel->strPassword + "\r\n" ) );
 			}
 		}
 	}
 	else if ( strstr( str, "Store key in cache? (y/n)" ) )
 	{
-		if ( m_iTunnelIndex >= 0 && m_iTunnelIndex <= m_pParent->m_listTunnels.Count() )
+		if ( m_pTunnel && m_pTunnel->pProcess )
 		{
-			const Tunnel_c *pt = &m_pParent->m_listTunnels.at( m_iTunnelIndex );
-			if ( pt->pProcess )
-			{
-				pt->pProcess->write( "n\n" );
-			}
+			m_pTunnel->pProcess->write( "n\n" );
 		}
 	}
 	else if ( strstr( str, "Access granted" ) )
 	{
-		m_pParent->connected( m_iTunnelIndex );
+		m_pParent->connected( *m_pTunnel );
 	}
 	else if ( strstr( str, "Authentication succeeded" ) )
 	{
-		m_pParent->connected( m_iTunnelIndex );
+		m_pParent->connected( *m_pTunnel );
 	}
 	else if ( strstr( str, "Access denied" ) )
 	{
-		if ( m_iTunnelIndex >= 0 && m_iTunnelIndex <= m_pParent->m_listTunnels.Count() )
-		{
-			Tunnel_c *pt = &m_pParent->m_listTunnels[m_iTunnelIndex];
-			pt->strPassword = INVALID_PASSWORD;
-		}
+		if ( m_pTunnel ) m_pTunnel->strPassword = INVALID_PASSWORD;
 	}
 }
 
