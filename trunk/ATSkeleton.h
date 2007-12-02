@@ -72,7 +72,7 @@ public:
 	ATSkeletonWindow(QWidget *parent = 0);
 	~ATSkeletonWindow();
 
-	void onClose();
+	bool onClose();
 
 	void AddToLog( Tunnel_c &tunnel, const char *format, ... );
 
@@ -89,11 +89,14 @@ public slots:
 	void slotConnectorFinished( Tunnel_c* );
 	void slotAutoConnect( Tunnel_c* );
 	void slotBrowseKeyFile();
-	void slotItemDoubleClicked(QTreeWidgetItem*);
+	void slotItemActivated();
+	void slotDelayReadOptions();
+	void slotReadOptions();
 
 signals:
 	void signalSetTrayIcon( int iIndex );
 	void signalAutoConnect( Tunnel_c* );
+	void signalReadOptions();
 
 private:
 	Ui::ATSkeletonWindowClass ui;
@@ -121,9 +124,12 @@ private:
 
 	Tunnel_c *getTunnelFromTreeItem( const QTreeWidgetItem *twi );
 
-	std::list<Tunnel_c> m_listTunnels2;
+	std::list<Tunnel_c> m_listTunnels;
+
+	QTimer m_timerReadOptions;
 
 	friend class ATTunnelConnector_c;
+	friend class ATMainWindow_c;
 };
 
 #endif 

@@ -4,7 +4,7 @@
 #include "ATMainWindow.h"
 
 // For the about box
-const char *APP_VERSION = "0.7.2"; // Don't forget the resource file.
+const char *APP_VERSION = "0.7.4"; // Don't forget the resource file.
 const char *APP_DATE = __DATE__;
 const char *APP_NICE_NAME = "ezTunnel SSH";
 
@@ -51,14 +51,14 @@ static void myMessageOutput(QtMsgType type, const char *msg)
 
 int main(int argc, char *argv[])
 {
-	ATDEBUG( __FUNCTION__ );
+	qDebug( __FUNCTION__ );
 
 	argv0 = argv[0];
 	g_strIniFile = QString( "%1.ini" ).arg( argv0 );
 	g_strIniFile.remove(".exe");
 
 	QApplication app(argc, argv);
-	ATASSERT( app.connect(&app, SIGNAL(lastWindowClosed()), &app, SLOT(quit())) );
+	// ATASSERT( app.connect(&app, SIGNAL(lastWindowClosed()), &app, SLOT(quit())) );
 
 	qInstallMsgHandler(myMessageOutput);
 	//atlog.setOutputFile( "atlog.txt" );

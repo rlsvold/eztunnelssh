@@ -4,16 +4,21 @@
 #include "ATNamedAction.h"
 #include "ATSkeleton.h"
 
-#define MIN_TRIGGER_TIMER (1000)
+#define MIN_TRIGGER_TIMER (400)
+#define EZ_HOTKEY (10)
 
 ATMainWindow_c::ATMainWindow_c( QWidget *vpParent ):
 QMainWindow( vpParent ),
 m_iconConnected( QPixmap( ":connected.png" ) ),
 m_iconConnecting( QPixmap( ":connecting.png" ) ),
-m_iconDisconnected( QPixmap( ":disconnected.png" ) )
+m_iconDisconnected( QPixmap( ":disconnected.png" ) ),
+m_bHotkeyEnabled( false ),
+m_bMinimizeToTray( false )
 {
 	m_pMainWindow = new ATSkeletonWindow(this);
 	setCentralWidget( m_pMainWindow );
+
+	ATVERIFY( connect( m_pMainWindow, SIGNAL( signalReadOptions() ), this, SLOT( slotReadOptions() ) ) );
 
 	setWindowIcon( m_iconDisconnected );
 	setWindowTitle( QString( "%1 %2" ).arg( APP_NICE_NAME ).arg( APP_VERSION ) );
@@ -24,11 +29,40 @@ m_iconDisconnected( QPixmap( ":disconnected.png" ) )
 
 	readSettings();
 
+	updateOptions();
+
+	DoRegisterHotKey();
+
 	slotChangeStyle( m_strStyle );
 
 	m_lastTrayTrigger.start();
 }
 
+void ATMainWindow_c::DoRegisterHotKey()
+{
+#ifdef _WIN32
+	UnregisterHotKey( winId(), EZ_HOTKEY );
+
+	if ( m_bHotkeyEnabled )
+	{
+		int iModifier = 0;
+		int iKey = 0;
+
+		if ( m_strHotkeyMod1 == "Ctrl" )	iModifier |= MOD_CONTROL;
+		if ( m_strHotkeyMod1 == "Alt" )		iModifier |= MOD_ALT;
+		if ( m_strHotkeyMod2 == "Shift" )	iModifier |= MOD_SHIFT;
+
+		if ( !m_strHotkeyKey.isEmpty() )
+		{
+			iKey = m_strHotkeyKey.toUpper().at( 0 ).toLatin1();
+			if ( iKey < 'A' || iKey > 'Z' ) iKey = 0;
+		}
+
+		if ( iModifier && iKey )
+			RegisterHotKey( winId(), EZ_HOTKEY, iModifier, iKey );
+	}
+#endif
+}
 
 void ATMainWindow_c::createTrayIcon()
 {
@@ -39,7 +73,7 @@ void ATMainWindow_c::createTrayIcon()
 	ATVERIFY( connect(restoreAction, SIGNAL(triggered()), this, SLOT(showNormal())) );
 
 	QAction *quitAction = new QAction(tr("&Quit"), this);
-	ATVERIFY( connect(quitAction, SIGNAL(triggered()), qApp, SLOT(quit())) );
+	ATVERIFY( connect(quitAction, SIGNAL(triggered()), this, SLOT(slotTentativeQuit())) );
 
 	m_trayIconMenu = new QMenu( this );
 	m_trayIconMenu->addAction(aboutAction);
@@ -71,15 +105,15 @@ void ATMainWindow_c::iconActivated(QSystemTrayIcon::ActivationReason reason)
 		{
 			if ( isVisible() )
 			{
-				hide();
+				hideWindow();
 			}
 			else
 			{
 				showNormal();
 				IF_WIN32( ::SetForegroundWindow( winId() ) );
 			}
+			m_lastTrayTrigger.restart();
 		}
-		m_lastTrayTrigger.restart();
 		break;
 	//case QSystemTrayIcon::DoubleClick:
 	//	break;
@@ -99,13 +133,21 @@ bool ATMainWindow_c::winEvent( MSG *m, long *result )
 		{
 		case WM_SIZE:
 			{
-				if ( m->wParam == SIZE_MINIMIZED )
+				if ( m_bMinimizeToTray )
 				{
-					ShowWindow(winId(), SW_HIDE);
-					return true;
+					if ( m->wParam == SIZE_MINIMIZED )
+					{
+						ShowWindow(winId(), SW_HIDE);
+						return true;
+					}
 				}
 			}
 			break;
+		case WM_HOTKEY:
+			{
+				HotKey(LOWORD(m->lParam), HIWORD(m->lParam));
+				return true;
+			}
 		default:
 			break;
 		}
@@ -115,6 +157,19 @@ bool ATMainWindow_c::winEvent( MSG *m, long *result )
 } 
 #endif
 
+void ATMainWindow_c::HotKey( unsigned short /*lo*/, unsigned short /*hi*/ )
+{
+	if ( isVisible() )
+	{
+		hideWindow();
+	}
+	else
+	{
+		showNormal();
+		IF_WIN32( ::SetForegroundWindow( winId() ) );
+	}
+}
+
 bool ATMainWindow_c::InitMenusAndActions()
 {
 	QAction *pAction;
@@ -122,7 +177,7 @@ bool ATMainWindow_c::InitMenusAndActions()
 	QMenu *pFileMenu	= new QMenu(this);
 	pAction				= new QAction(QObject::tr("&Quit"), this);
 	pAction->setShortcut(QObject::tr("CTRL+Q"));
-	bool bRet			= QObject::connect(pAction, SIGNAL(triggered()), qApp, SLOT(quit()));
+	bool bRet			= QObject::connect(pAction, SIGNAL(triggered()), this, SLOT(slotTentativeQuit()));
 	ATASSERT( bRet );
 
 	pFileMenu->addAction( pAction );
@@ -162,6 +217,11 @@ void ATMainWindow_c::readSettings()
 	QSize size = settings.value( "size", QSize(800, 480) ).toSize();
 	int bMax = settings.value( "maximized", 0 ).toInt();
 	m_strStyle = settings.value( "qtstyle", "" ).toString();
+	m_strHotkeyMod1 = settings.value( "hotkey_mod1", "Ctrl" ).toString();
+	m_strHotkeyMod2 = settings.value( "hotkey_mod2", "Shift" ).toString();
+	m_strHotkeyKey  = settings.value( "hotkey_key",  "E" ).toString();
+	m_bHotkeyEnabled = settings.value( "hotkey_enabled", true ).toBool();
+	m_bMinimizeToTray = settings.value( "minimize_to_tray", true ).toBool();
 
 	if ( pos.x() && pos.y() ) move(pos);
 	if ( !size.isEmpty() ) resize(size);
@@ -180,13 +240,18 @@ void ATMainWindow_c::writeSettings()
 	}
 	settings.setValue( "maximized", bMax );
 	settings.setValue( "qtstyle", m_strStyle );
+	settings.setValue( "hotkey_mod1", m_strHotkeyMod1 );
+	settings.setValue( "hotkey_mod2", m_strHotkeyMod2 );
+	settings.setValue( "hotkey_key", m_strHotkeyKey );
+	settings.setValue( "hotkey_enabled", m_bHotkeyEnabled );
+	settings.setValue( "minimize_to_tray", m_bMinimizeToTray );
 
 	settings.sync();
 }
 
 void ATMainWindow_c::slotChangeStyle( QString strStyle )
 {
-	ATDEBUG( __FUNCTION__ );
+	qDebug( __FUNCTION__ );
 
 	m_strStyle = strStyle;
 
@@ -199,15 +264,25 @@ void ATMainWindow_c::slotChangeStyle( QString strStyle )
 
 void ATMainWindow_c::closeEvent( QCloseEvent * event )
 {
-	if ( 0 ) // set to 1 to quit on close, set to 0 to hide on close
+	if ( m_bMinimizeToTray )
 	{
-		m_pMainWindow->onClose();
-		event->accept();
+		hideWindow();
+		event->ignore();
 	}
 	else
 	{
-		hide();
-		event->ignore();
+		if ( m_pMainWindow->onClose() )
+			event->accept();
+		else
+			event->ignore();
+	}
+}
+
+void ATMainWindow_c::slotTentativeQuit()
+{
+	if ( m_pMainWindow->onClose() )
+	{
+		qApp->quit();
 	}
 }
 
@@ -222,5 +297,61 @@ void ATMainWindow_c::slotShowAbout()
 	strAbout += "http://eztunnelssh.hikey.org\n";
 	strAbout += "Qt " QT_VERSION_STR " trolltech.com";
 
+	showNormal();
 	QMessageBox::about( this, strTitle, strAbout );
+}
+
+namespace {
+	void setComboString( QComboBox *pCombo, const QString &str )
+	{
+		ATASSERT( pCombo );
+		if ( pCombo == NULL ) return;
+
+		int iIndex = pCombo->findText( str );
+		if ( iIndex != -1 )
+			pCombo->setCurrentIndex( iIndex );
+	}
+}
+
+void ATMainWindow_c::slotReadOptions()
+{
+	qDebug( "%s", __FUNCTION__ );
+
+	QString strHotkeyMod1 = m_pMainWindow->ui.comboHotkey1->currentText();
+	QString strHotkeyMod2 = m_pMainWindow->ui.comboHotkey2->currentText();
+	QString strHotkeyKey  = m_pMainWindow->ui.editHotkey->text();
+	bool bHotkeyEnabled = m_pMainWindow->ui.groupHotkey->isChecked();
+
+	if ( (strHotkeyKey!=m_strHotkeyKey) || (strHotkeyMod1!=m_strHotkeyMod1) || (strHotkeyMod2!=m_strHotkeyMod2) || (bHotkeyEnabled!=m_bHotkeyEnabled) )
+	{
+		m_strHotkeyKey = strHotkeyKey;
+		m_strHotkeyMod1 = strHotkeyMod1;
+		m_strHotkeyMod2 = strHotkeyMod2;
+		m_bHotkeyEnabled = bHotkeyEnabled;
+
+		DoRegisterHotKey();
+	}
+
+	m_bMinimizeToTray = m_pMainWindow->ui.checkMinimizeToTray->isChecked();
+}
+
+void ATMainWindow_c::updateOptions()
+{
+	m_pMainWindow->ui.groupHotkey->setChecked( m_bHotkeyEnabled );
+	setComboString( m_pMainWindow->ui.comboHotkey1, m_strHotkeyMod1 );
+	setComboString( m_pMainWindow->ui.comboHotkey2, m_strHotkeyMod2 );
+	m_pMainWindow->ui.editHotkey->setText( m_strHotkeyKey );
+	m_pMainWindow->ui.checkMinimizeToTray->setChecked( m_bMinimizeToTray );
+}
+
+void ATMainWindow_c::hideWindow()
+{
+	if ( m_bMinimizeToTray )
+	{
+		hide();
+	}
+	else
+	{
+		showMinimized();
+	}
 }

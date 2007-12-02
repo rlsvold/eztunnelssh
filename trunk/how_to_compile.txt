@@ -11,6 +11,7 @@ On Windows with Visual Studio 2003 or 2005:
 - Open the project file and save the solution (it will ask the first time
   you compile).
 - Compile.
+- You will need plink.exe in the ezTunnelSSH.exe directory to make it run.
 
 On Linux:
 - Install Qt 4.3.2, apt-get it or compile it and set the environment

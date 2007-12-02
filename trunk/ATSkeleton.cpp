@@ -1,7 +1,8 @@
 #include "ATSkeleton.h"
 
-#define PAGE_CONNECT (0)
-#define PAGE_EDIT    (1)
+#define PAGE_CONNECT	(0)
+#define PAGE_EDIT		(1)
+#define PAGE_OPTIONS	(2)
 
 #define MAX_BUFFER_SIZE (4*1024)
 #define WAIT_FOR_FINISHED_TIMEOUT (100)
@@ -14,6 +15,7 @@ ATSkeletonWindow::ATSkeletonWindow(QWidget *parent)
 {
 	m_pTunnelEdit = NULL;
 	m_bDisableChanges = false;
+	m_timerReadOptions.setInterval( 200 );
 
 	ui.setupUi(this);
 
@@ -35,8 +37,14 @@ ATSkeletonWindow::~ATSkeletonWindow()
 {
 	writeSettings();
 
-	for ( TunnelInterator it = m_listTunnels2.begin(); it != m_listTunnels2.end(); ++it )
+	// Make sure we won't try to reconnect
+	ATVERIFY( disconnect( this, SIGNAL( signalAutoConnect(Tunnel_c*) ), 0, 0 ) );
+
+	for ( TunnelInterator it = m_listTunnels.begin(); it != m_listTunnels.end(); ++it )
+	{
 		disconnectTunnel( *it );
+		ATASSERT( it->pProcess == NULL );
+	}
 }
 
 void ATSkeletonWindow::wireSignals()
@@ -51,12 +59,21 @@ void ATSkeletonWindow::wireSignals()
 	ATVERIFY( connect( ui.btnDisconnect,   SIGNAL( clicked() ), this, SLOT( slotDisconnect() ) ) );
 	ATVERIFY( connect( ui.btnBrowseSSHKeyFile,   SIGNAL( clicked() ), this, SLOT( slotBrowseKeyFile() ) ) );
 
+	// Connect option related controls
+	ATVERIFY( connect( &m_timerReadOptions,		SIGNAL( timeout() ),					this, SLOT( slotReadOptions() ) ) );
+	ATVERIFY( connect( ui.editHotkey,			SIGNAL( textChanged(const QString&) ),	this, SLOT( slotDelayReadOptions() ) ) );
+	ATVERIFY( connect( ui.comboHotkey1,			SIGNAL( currentIndexChanged(int) ),		this, SLOT( slotDelayReadOptions() ) ) );
+	ATVERIFY( connect( ui.comboHotkey2,			SIGNAL( currentIndexChanged(int) ),		this, SLOT( slotDelayReadOptions() ) ) );
+	ATVERIFY( connect( ui.checkMinimizeToTray,	SIGNAL( stateChanged(int) ),			this, SLOT( slotDelayReadOptions() ) ) );
+	ATVERIFY( connect( ui.checkConfirmOnQuit,	SIGNAL( stateChanged(int) ),			this, SLOT( slotDelayReadOptions() ) ) );
+	ATVERIFY( connect( ui.groupHotkey,			SIGNAL( toggled(bool) ),				this, SLOT( slotDelayReadOptions() ) ) );
+
 	// Connect tab widget
 	ATVERIFY( connect( ui.tabWidget, SIGNAL( currentChanged(int) ), this, SLOT( slotTabChanged() ) ) );
 
 	// Connect tree
 	ATVERIFY( connect( ui.treeTunnels, SIGNAL( itemSelectionChanged() ), this, SLOT( slotSelectTunnel() ) ) );
-	ATVERIFY( connect( ui.treeTunnels, SIGNAL( itemDoubleClicked(QTreeWidgetItem*,int) ), this, SLOT( slotItemDoubleClicked(QTreeWidgetItem*) ) ) );
+	ATVERIFY( connect( ui.treeTunnels, SIGNAL( activated(const QModelIndex &) ), this, SLOT( slotItemActivated() ) ) );
 
 	// Connect buttons
 	ATVERIFY( connect( this, SIGNAL( signalAutoConnect(Tunnel_c*) ), this, SLOT( slotAutoConnect(Tunnel_c*) ), Qt::QueuedConnection ) );
@@ -66,8 +83,10 @@ void ATSkeletonWindow::readSettings()
 {
 	QSettings settings( g_strIniFile, QSettings::IniFormat);
 
-	m_listTunnels2.clear();
+	m_listTunnels.clear();
 	ui.treeTunnels->clear();
+
+	ui.checkConfirmOnQuit->setChecked( settings.value( "ConfirmOnQuit", true ).toBool() );
 
 	int iCount = settings.value( "NumberOfTunnels", 0 ).toInt();
 
@@ -99,7 +118,7 @@ void ATSkeletonWindow::readSettings()
 		tunnel.twi->setIcon( 0, QPixmap( ":disconnected.png" ) );
 		tunnel.twi->setText( 0, tunnel.strName );
 
-		m_listTunnels2.push_back( tunnel );
+		m_listTunnels.push_back( tunnel );
 	}
 
 	if ( ui.treeTunnels->topLevelItemCount() > 0 )
@@ -113,10 +132,12 @@ void ATSkeletonWindow::writeSettings()
 {
 	QSettings settings( g_strIniFile, QSettings::IniFormat);
 
-	settings.setValue( "NumberOfTunnels", m_listTunnels2.size() );
+	settings.setValue( "ConfirmOnQuit", ui.checkConfirmOnQuit->isChecked() );
+
+	settings.setValue( "NumberOfTunnels", m_listTunnels.size() );
 
 	int i=0;
-	for ( TunnelInterator it = m_listTunnels2.begin(); it != m_listTunnels2.end(); ++it )
+	for ( TunnelInterator it = m_listTunnels.begin(); it != m_listTunnels.end(); ++it )
 	{
 		QString strGroup = QString( "Tunnel%1" ).arg( i );
 		settings.beginGroup( strGroup );
@@ -192,11 +213,11 @@ void ATSkeletonWindow::slotDeleteTunnel()
  		delete twi;
  		disconnectTunnel( *pt );
  
-		for ( TunnelInterator it = m_listTunnels2.begin(); it != m_listTunnels2.end(); ++it )
+		for ( TunnelInterator it = m_listTunnels.begin(); it != m_listTunnels.end(); ++it )
 		{
 			if ( it->twi == twi )
 			{
-				m_listTunnels2.erase( it );
+				m_listTunnels.erase( it );
 				break;
 			}
 		}
@@ -228,8 +249,9 @@ void ATSkeletonWindow::slotDisconnect()
 	disconnectTunnel( *pt );
 }
 
-void ATSkeletonWindow::slotItemDoubleClicked(QTreeWidgetItem * twi)
+void ATSkeletonWindow::slotItemActivated()
 {
+	QTreeWidgetItem *twi = ui.treeTunnels->currentItem();
 	if ( twi == NULL ) return;
 
 	ui.tabWidget->setCurrentIndex( PAGE_CONNECT );
@@ -262,7 +284,7 @@ Tunnel_c *ATSkeletonWindow::getTunnelFromTreeItem( const QTreeWidgetItem *twi )
 {
 	if ( twi == NULL ) return NULL;
 
-	for ( TunnelInterator it = m_listTunnels2.begin(); it != m_listTunnels2.end(); ++it )
+	for ( TunnelInterator it = m_listTunnels.begin(); it != m_listTunnels.end(); ++it )
 	{
 		if ( it->twi == twi )
 			return &(*it);
@@ -383,7 +405,8 @@ void ATSkeletonWindow::disconnectTunnel( Tunnel_c &tunnel )
 	qApp->processEvents();
 
 	pt->pProcess->kill();
-	pt->pProcess->waitForFinished( WAIT_FOR_FINISHED_TIMEOUT );
+	bool bOk = pt->pProcess->waitForFinished( WAIT_FOR_FINISHED_TIMEOUT );
+	Q_UNUSED( bOk );
 	delete pt->pProcess;
 	pt->pProcess = NULL;
 
@@ -396,7 +419,7 @@ void ATSkeletonWindow::disconnectTunnel( Tunnel_c &tunnel )
 
 	int iConnectedCount = 0;
 
-	for ( TunnelInterator it = m_listTunnels2.begin(); it != m_listTunnels2.end(); ++it )
+	for ( TunnelInterator it = m_listTunnels.begin(); it != m_listTunnels.end(); ++it )
 		if ( it->pProcess ) iConnectedCount++;
 
 	if ( iConnectedCount == 0 )
@@ -472,7 +495,7 @@ void ATSkeletonWindow::slotAddTunnel()
  	twi->setIcon( 0, QPixmap( ":disconnected.png" ) );
 	tunnel.twi = twi;
 
-	m_listTunnels2.push_back( tunnel );
+	m_listTunnels.push_back( tunnel );
 
  	ui.treeTunnels->setCurrentItem( twi );
  
@@ -500,7 +523,7 @@ void ATSkeletonWindow::slotDuplicateTunnel()
  	twi->setIcon( 0, QPixmap( ":disconnected.png" ) );
 	tunnel.twi = twi;
 
-	m_listTunnels2.push_back( tunnel );
+	m_listTunnels.push_back( tunnel );
 
  	ui.treeTunnels->setCurrentItem( twi );
  
@@ -523,7 +546,7 @@ void ATSkeletonWindow::slotSelectTunnel()
 		return;
 	}
 
-	for ( TunnelInterator it = m_listTunnels2.begin(); it != m_listTunnels2.end(); ++it )
+	for ( TunnelInterator it = m_listTunnels.begin(); it != m_listTunnels.end(); ++it )
 	{
 		if ( it->twi == twi )
 		{
@@ -661,12 +684,44 @@ bool ATSkeletonWindow::askforPassword( Tunnel_c &tunnel )
 	return false;
 }
 
-void ATSkeletonWindow::onClose()
+bool ATSkeletonWindow::onClose()
 {
 	if ( detectTunnelChange() )
 	{
 		confirmSaveTunnel();
 	}
+
+	if ( ui.checkConfirmOnQuit->isChecked() )
+	{
+		int iConnectionCount = 0;
+		for ( TunnelInterator it = m_listTunnels.begin(); it != m_listTunnels.end(); ++it )
+		{
+			if ( it->pProcess )
+			{
+				iConnectionCount++;
+			}
+		}
+
+		if ( iConnectionCount )
+		{
+			QString strQuestion;
+
+			if ( iConnectionCount == 1 )
+				strQuestion = "There is 1 active tunnel connection.";
+			else
+				strQuestion = QString( "There are %1 active tunnel connections." ).arg( iConnectionCount );
+
+			strQuestion += "\nAre you sure you want to disconnect and quit?";
+
+
+			QMessageBox::StandardButton iRet = QMessageBox::question( this, APP_NICE_NAME, strQuestion, QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes );
+
+			if ( iRet == QMessageBox::No )
+				return false;
+		}
+	}
+
+	return true;
 }
 
 static int safe_vsnprintf(char *buffer, size_t count, const char *format, va_list argptr)
@@ -728,13 +783,32 @@ void ATSkeletonWindow::slotAutoConnect( Tunnel_c *pt )
 		return;
 	}
 
-	for ( TunnelInterator it = m_listTunnels2.begin(); it != m_listTunnels2.end(); ++it )
+	bool bSelected = false;
+	for ( TunnelInterator it = m_listTunnels.begin(); it != m_listTunnels.end(); ++it )
 	{
 		if ( it->bAutoConnect )
 		{
+			if ( !bSelected && it->twi )
+			{
+				bSelected = true;
+				ui.treeTunnels->setCurrentItem( it->twi );
+			}
+
 			connectTunnel( *it );
 		}
 	}
+}
+
+void ATSkeletonWindow::slotDelayReadOptions()
+{
+	m_timerReadOptions.stop();
+	m_timerReadOptions.start();
+}
+
+void ATSkeletonWindow::slotReadOptions()
+{
+	m_timerReadOptions.stop();
+	emit signalReadOptions();
 }
 
 
