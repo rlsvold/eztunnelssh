@@ -16,7 +16,7 @@ ATNamedAction::~ATNamedAction()
 
 void ATNamedAction::slotCustomTrigger()
 {
-	ATDEBUG( __FUNCTION__ );
+	qDebug( __FUNCTION__ );
 
 	emit signalTriggerNamed( m_strName );
 }

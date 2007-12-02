@@ -23,12 +23,15 @@ public slots:
 	void slotShowAbout();
 	void iconActivated(QSystemTrayIcon::ActivationReason reason);
 	void slotSetTrayIcon(int iIndex);
+	void slotReadOptions();
+	void slotTentativeQuit();
 
 protected:
 	void closeEvent ( QCloseEvent * event );
 
 private:
 	IF_WIN32( bool winEvent( MSG *m, long *result ) );
+	void HotKey( unsigned short lo, unsigned short hi );
 
 	ATSkeletonWindow *m_pMainWindow;
 	QString m_strStyle;
@@ -46,6 +49,17 @@ private:
 	QIcon m_iconConnected;
 	QIcon m_iconConnecting;
 	QIcon m_iconDisconnected;
+
+	void updateOptions();
+
+	void DoRegisterHotKey();
+	QString m_strHotkeyMod1;
+	QString m_strHotkeyMod2;
+	QString m_strHotkeyKey;
+	bool m_bHotkeyEnabled;
+
+	bool m_bMinimizeToTray;
+	void hideWindow();
 };
 
 #endif

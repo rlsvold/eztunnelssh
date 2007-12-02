@@ -144,7 +144,7 @@
        </sizepolicy>
       </property>
       <property name="currentIndex" >
-       <number>0</number>
+       <number>2</number>
       </property>
       <widget class="QWidget" name="tab" >
        <attribute name="title" >
@@ -193,303 +193,491 @@
        <attribute name="title" >
         <string>Edit</string>
        </attribute>
-       <widget class="QWidget" native="1" name="widget1" >
-        <property name="geometry" >
-         <rect>
-          <x>9</x>
-          <y>9</y>
-          <width>481</width>
-          <height>307</height>
-         </rect>
-        </property>
-        <layout class="QGridLayout" >
-         <item row="0" column="0" >
-          <widget class="QLabel" name="label" >
-           <property name="text" >
-            <string>Tunnel &amp;Name:</string>
-           </property>
-           <property name="buddy" >
-            <cstring>editTunnelName</cstring>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="1" >
-          <widget class="QLineEdit" name="editTunnelName" >
-           <property name="enabled" >
-            <bool>true</bool>
-           </property>
-           <property name="toolTip" >
-            <string>Name of the tunnel for the list on the left</string>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="2" >
-          <widget class="QLabel" name="label_6" >
-           <property name="text" >
-            <string>&amp;Username:</string>
-           </property>
-           <property name="buddy" >
-            <cstring>editUsername</cstring>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="3" colspan="2" >
-          <widget class="QLineEdit" name="editUsername" >
-           <property name="enabled" >
-            <bool>true</bool>
-           </property>
-           <property name="toolTip" >
-            <string>Username for the SSH server</string>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="0" >
-          <widget class="QLabel" name="label_2" >
-           <property name="text" >
-            <string>SSH &amp;Host:</string>
-           </property>
-           <property name="buddy" >
-            <cstring>editSSHHost</cstring>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="1" >
-          <widget class="QLineEdit" name="editSSHHost" >
-           <property name="enabled" >
-            <bool>true</bool>
-           </property>
-           <property name="toolTip" >
-            <string>Address or IP of the SSH server to connect to (host:port, or host only for port 22)</string>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="2" >
-          <widget class="QLabel" name="label_7" >
-           <property name="text" >
-            <string>SSH Key &amp;File:</string>
-           </property>
-           <property name="buddy" >
-            <cstring>editSSHKeyFile</cstring>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="3" colspan="2" >
-          <widget class="QLineEdit" name="editSSHKeyFile" >
-           <property name="enabled" >
-            <bool>true</bool>
-           </property>
-           <property name="toolTip" >
-            <string>Optional: SSH key file to avoid having to type the password every time</string>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="5" >
-          <widget class="QToolButton" name="btnBrowseSSHKeyFile" >
-           <property name="text" >
-            <string>...</string>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="0" >
-          <widget class="QLabel" name="label_3" >
-           <property name="text" >
-            <string>&amp;Local Port:</string>
-           </property>
-           <property name="buddy" >
-            <cstring>editLocalPort</cstring>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="1" >
-          <widget class="QLineEdit" name="editLocalPort" >
-           <property name="enabled" >
-            <bool>true</bool>
-           </property>
-           <property name="toolTip" >
-            <string>Port to use locally for the tunnel</string>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="2" >
-          <widget class="QLabel" name="label_8" >
-           <property name="text" >
-            <string>&amp;Direction:</string>
-           </property>
-           <property name="buddy" >
-            <cstring>comboDirection</cstring>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="3" colspan="2" >
-          <widget class="QComboBox" name="comboDirection" >
-           <property name="enabled" >
-            <bool>true</bool>
-           </property>
-           <property name="toolTip" >
-            <string>Direction of the tunnel</string>
-           </property>
-           <item>
-            <property name="text" >
-             <string>Local to Remote</string>
-            </property>
+       <layout class="QGridLayout" >
+        <item row="0" column="0" >
+         <widget class="QWidget" native="1" name="widget_2" >
+          <layout class="QGridLayout" >
+           <item row="0" column="0" >
+            <widget class="QWidget" native="1" name="widget1" >
+             <layout class="QGridLayout" >
+              <item row="0" column="0" >
+               <widget class="QLabel" name="label" >
+                <property name="text" >
+                 <string>Tunnel &amp;Name:</string>
+                </property>
+                <property name="buddy" >
+                 <cstring>editTunnelName</cstring>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1" >
+               <widget class="QLineEdit" name="editTunnelName" >
+                <property name="enabled" >
+                 <bool>true</bool>
+                </property>
+                <property name="toolTip" >
+                 <string>Name of the tunnel for the list on the left</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="2" >
+               <widget class="QLabel" name="label_6" >
+                <property name="text" >
+                 <string>&amp;Username:</string>
+                </property>
+                <property name="buddy" >
+                 <cstring>editUsername</cstring>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="3" colspan="2" >
+               <widget class="QLineEdit" name="editUsername" >
+                <property name="enabled" >
+                 <bool>true</bool>
+                </property>
+                <property name="toolTip" >
+                 <string>Username for the SSH server</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0" >
+               <widget class="QLabel" name="label_2" >
+                <property name="text" >
+                 <string>SSH &amp;Host:</string>
+                </property>
+                <property name="buddy" >
+                 <cstring>editSSHHost</cstring>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1" >
+               <widget class="QLineEdit" name="editSSHHost" >
+                <property name="enabled" >
+                 <bool>true</bool>
+                </property>
+                <property name="toolTip" >
+                 <string>Address or IP of the SSH server to connect to (host:port, or host only for port 22)</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="2" >
+               <widget class="QLabel" name="label_7" >
+                <property name="text" >
+                 <string>SSH Key &amp;File:</string>
+                </property>
+                <property name="buddy" >
+                 <cstring>editSSHKeyFile</cstring>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="3" colspan="2" >
+               <widget class="QLineEdit" name="editSSHKeyFile" >
+                <property name="enabled" >
+                 <bool>true</bool>
+                </property>
+                <property name="toolTip" >
+                 <string>Optional: SSH key file to avoid having to type the password every time</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="5" >
+               <widget class="QToolButton" name="btnBrowseSSHKeyFile" >
+                <property name="text" >
+                 <string>...</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="0" >
+               <widget class="QLabel" name="label_3" >
+                <property name="text" >
+                 <string>&amp;Local Port:</string>
+                </property>
+                <property name="buddy" >
+                 <cstring>editLocalPort</cstring>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="1" >
+               <widget class="QLineEdit" name="editLocalPort" >
+                <property name="enabled" >
+                 <bool>true</bool>
+                </property>
+                <property name="toolTip" >
+                 <string>Port to use locally for the tunnel</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="2" >
+               <widget class="QLabel" name="label_8" >
+                <property name="text" >
+                 <string>&amp;Direction:</string>
+                </property>
+                <property name="buddy" >
+                 <cstring>comboDirection</cstring>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="3" colspan="2" >
+               <widget class="QComboBox" name="comboDirection" >
+                <property name="enabled" >
+                 <bool>true</bool>
+                </property>
+                <property name="toolTip" >
+                 <string>Direction of the tunnel</string>
+                </property>
+                <item>
+                 <property name="text" >
+                  <string>Local to Remote</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text" >
+                  <string>Remote to Local</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+              <item row="3" column="0" >
+               <widget class="QLabel" name="label_4" >
+                <property name="text" >
+                 <string>&amp;Remote Host:</string>
+                </property>
+                <property name="buddy" >
+                 <cstring>editRemoteHost</cstring>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="1" >
+               <widget class="QLineEdit" name="editRemoteHost" >
+                <property name="enabled" >
+                 <bool>true</bool>
+                </property>
+                <property name="toolTip" >
+                 <string>Remote host for the tunnel (typically an internal IP)</string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="3" colspan="2" >
+               <widget class="QCheckBox" name="checkAutoConnect" >
+                <property name="enabled" >
+                 <bool>true</bool>
+                </property>
+                <property name="toolTip" >
+                 <string>Automatically connect the tunnel on application startup</string>
+                </property>
+                <property name="text" >
+                 <string>Auto C&amp;onnect</string>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="0" >
+               <widget class="QLabel" name="label_5" >
+                <property name="text" >
+                 <string>Remote &amp;Port:</string>
+                </property>
+                <property name="buddy" >
+                 <cstring>editRemotePort</cstring>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="1" >
+               <widget class="QLineEdit" name="editRemotePort" >
+                <property name="enabled" >
+                 <bool>true</bool>
+                </property>
+                <property name="toolTip" >
+                 <string>Port to use on the remote host for the tunnel</string>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="3" colspan="2" >
+               <widget class="QCheckBox" name="checkCompression" >
+                <property name="enabled" >
+                 <bool>true</bool>
+                </property>
+                <property name="toolTip" >
+                 <string>Enable compression for the tunnel (recommended for connections over the Internet)</string>
+                </property>
+                <property name="text" >
+                 <string>&amp;Compression</string>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="3" colspan="2" >
+               <widget class="QCheckBox" name="checkDoKeepAlivePing" >
+                <property name="enabled" >
+                 <bool>false</bool>
+                </property>
+                <property name="toolTip" >
+                 <string>Not implemented at this time</string>
+                </property>
+                <property name="text" >
+                 <string>Do &amp;Keep-Alive Ping</string>
+                </property>
+               </widget>
+              </item>
+              <item row="6" column="0" >
+               <widget class="QLabel" name="label_9" >
+                <property name="text" >
+                 <string>&amp;Extra Arguments:</string>
+                </property>
+                <property name="buddy" >
+                 <cstring>editExtraArguments</cstring>
+                </property>
+               </widget>
+              </item>
+              <item row="6" column="1" >
+               <widget class="QLineEdit" name="editExtraArguments" >
+                <property name="toolTip" >
+                 <string>Advanced: Optional extra parameters to pass to the SSH client</string>
+                </property>
+               </widget>
+              </item>
+              <item row="6" column="3" colspan="2" >
+               <widget class="QCheckBox" name="checkAutoReconnect" >
+                <property name="toolTip" >
+                 <string>Automatically reconnect the tunnel when the connection is lost</string>
+                </property>
+                <property name="text" >
+                 <string>&amp;Auto Reconnect</string>
+                </property>
+               </widget>
+              </item>
+              <item row="7" column="3" >
+               <widget class="QRadioButton" name="radioSSH1" >
+                <property name="enabled" >
+                 <bool>true</bool>
+                </property>
+                <property name="toolTip" >
+                 <string>Force SSH version 1</string>
+                </property>
+                <property name="text" >
+                 <string>SSH&amp;1</string>
+                </property>
+               </widget>
+              </item>
+              <item row="7" column="4" colspan="2" >
+               <widget class="QRadioButton" name="radioSSH2" >
+                <property name="enabled" >
+                 <bool>true</bool>
+                </property>
+                <property name="toolTip" >
+                 <string>Use SSH version 2</string>
+                </property>
+                <property name="text" >
+                 <string>SSH&amp;2</string>
+                </property>
+               </widget>
+              </item>
+              <item row="8" column="1" >
+               <widget class="QPushButton" name="btnSave" >
+                <property name="enabled" >
+                 <bool>true</bool>
+                </property>
+                <property name="toolTip" >
+                 <string>Save the tunnel settings</string>
+                </property>
+                <property name="text" >
+                 <string>&amp;Save</string>
+                </property>
+                <property name="icon" >
+                 <iconset resource="res/resource.qrc" >:/add.png</iconset>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
            </item>
-           <item>
-            <property name="text" >
-             <string>Remote to Local</string>
-            </property>
+           <item row="0" column="1" >
+            <spacer>
+             <property name="orientation" >
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" >
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
            </item>
-          </widget>
-         </item>
-         <item row="3" column="0" >
-          <widget class="QLabel" name="label_4" >
-           <property name="text" >
-            <string>&amp;Remote Host:</string>
-           </property>
-           <property name="buddy" >
-            <cstring>editRemoteHost</cstring>
-           </property>
-          </widget>
-         </item>
-         <item row="3" column="1" >
-          <widget class="QLineEdit" name="editRemoteHost" >
-           <property name="enabled" >
-            <bool>true</bool>
-           </property>
-           <property name="toolTip" >
-            <string>Remote host for the tunnel (typically an internal IP)</string>
-           </property>
-          </widget>
-         </item>
-         <item row="3" column="3" colspan="2" >
-          <widget class="QCheckBox" name="checkAutoConnect" >
-           <property name="enabled" >
-            <bool>true</bool>
-           </property>
-           <property name="toolTip" >
-            <string>Automatically connect the tunnel on application startup</string>
-           </property>
-           <property name="text" >
-            <string>Auto C&amp;onnect</string>
-           </property>
-          </widget>
-         </item>
-         <item row="4" column="0" >
-          <widget class="QLabel" name="label_5" >
-           <property name="text" >
-            <string>Remote &amp;Port:</string>
-           </property>
-           <property name="buddy" >
-            <cstring>editRemotePort</cstring>
-           </property>
-          </widget>
-         </item>
-         <item row="4" column="1" >
-          <widget class="QLineEdit" name="editRemotePort" >
-           <property name="enabled" >
-            <bool>true</bool>
-           </property>
-           <property name="toolTip" >
-            <string>Port to use on the remote host for the tunnel</string>
-           </property>
-          </widget>
-         </item>
-         <item row="4" column="3" colspan="2" >
-          <widget class="QCheckBox" name="checkCompression" >
-           <property name="enabled" >
-            <bool>true</bool>
-           </property>
-           <property name="toolTip" >
-            <string>Enable compression for the tunnel (recommended for connections over the Internet)</string>
-           </property>
-           <property name="text" >
-            <string>&amp;Compression</string>
-           </property>
-          </widget>
-         </item>
-         <item row="5" column="3" colspan="2" >
-          <widget class="QCheckBox" name="checkDoKeepAlivePing" >
-           <property name="enabled" >
-            <bool>false</bool>
-           </property>
-           <property name="toolTip" >
-            <string>Not implemented at this time</string>
-           </property>
-           <property name="text" >
-            <string>Do &amp;Keep-Alive Ping</string>
-           </property>
-          </widget>
-         </item>
-         <item row="6" column="0" >
-          <widget class="QLabel" name="label_9" >
-           <property name="text" >
-            <string>&amp;Extra Arguments:</string>
-           </property>
-           <property name="buddy" >
-            <cstring>editExtraArguments</cstring>
-           </property>
-          </widget>
-         </item>
-         <item row="6" column="1" >
-          <widget class="QLineEdit" name="editExtraArguments" >
-           <property name="toolTip" >
-            <string>Advanced: Optional extra parameters to pass to the SSH client</string>
-           </property>
-          </widget>
-         </item>
-         <item row="6" column="3" colspan="2" >
-          <widget class="QCheckBox" name="checkAutoReconnect" >
-           <property name="toolTip" >
-            <string>Automatically reconnect the tunnel when the connection is lost</string>
-           </property>
-           <property name="text" >
-            <string>&amp;Auto Reconnect</string>
-           </property>
-          </widget>
-         </item>
-         <item row="7" column="3" >
-          <widget class="QRadioButton" name="radioSSH1" >
-           <property name="enabled" >
-            <bool>true</bool>
-           </property>
-           <property name="toolTip" >
-            <string>Force SSH version 1</string>
-           </property>
-           <property name="text" >
-            <string>SSH&amp;1</string>
-           </property>
-          </widget>
-         </item>
-         <item row="7" column="4" colspan="2" >
-          <widget class="QRadioButton" name="radioSSH2" >
-           <property name="enabled" >
-            <bool>true</bool>
-           </property>
-           <property name="toolTip" >
-            <string>Use SSH version 2</string>
-           </property>
-           <property name="text" >
-            <string>SSH&amp;2</string>
-           </property>
-          </widget>
-         </item>
-         <item row="8" column="1" >
-          <widget class="QPushButton" name="btnSave" >
-           <property name="enabled" >
-            <bool>true</bool>
-           </property>
-           <property name="toolTip" >
-            <string>Save the tunnel settings</string>
-           </property>
-           <property name="text" >
-            <string>&amp;Save</string>
-           </property>
-           <property name="icon" >
-            <iconset resource="res/resource.qrc" >:/add.png</iconset>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </widget>
+           <item row="1" column="0" >
+            <spacer>
+             <property name="orientation" >
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeHint" >
+              <size>
+               <width>20</width>
+               <height>40</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item row="0" column="1" >
+         <spacer>
+          <property name="orientation" >
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" >
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item row="1" column="0" >
+         <spacer>
+          <property name="orientation" >
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" >
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="tab_3" >
+       <attribute name="title" >
+        <string>Options</string>
+       </attribute>
+       <layout class="QGridLayout" >
+        <item row="0" column="0" >
+         <widget class="QWidget" native="1" name="widget" >
+          <layout class="QGridLayout" >
+           <item row="0" column="0" colspan="2" >
+            <widget class="QCheckBox" name="checkMinimizeToTray" >
+             <property name="text" >
+              <string>Minimize to tray</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0" >
+            <widget class="QCheckBox" name="checkConfirmOnQuit" >
+             <property name="text" >
+              <string>Confirm disconnection on quit</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="0" >
+            <widget class="QGroupBox" name="groupHotkey" >
+             <property name="title" >
+              <string>Hide/show window on hotkey</string>
+             </property>
+             <property name="checkable" >
+              <bool>true</bool>
+             </property>
+             <property name="checked" >
+              <bool>true</bool>
+             </property>
+             <layout class="QHBoxLayout" >
+              <item>
+               <widget class="QComboBox" name="comboHotkey1" >
+                <item>
+                 <property name="text" >
+                  <string>None</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text" >
+                  <string>Ctrl</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text" >
+                  <string>Alt</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+              <item>
+               <widget class="QComboBox" name="comboHotkey2" >
+                <item>
+                 <property name="text" >
+                  <string>None</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text" >
+                  <string>Shift</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLineEdit" name="editHotkey" >
+                <property name="inputMask" >
+                 <string>>A; </string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item row="2" column="1" >
+            <spacer>
+             <property name="orientation" >
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" >
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item row="3" column="0" >
+            <spacer>
+             <property name="orientation" >
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeHint" >
+              <size>
+               <width>20</width>
+               <height>41</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item row="0" column="1" >
+         <spacer>
+          <property name="orientation" >
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" >
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item row="1" column="0" >
+         <spacer>
+          <property name="orientation" >
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" >
+           <size>
+            <width>20</width>
+            <height>391</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
       </widget>
      </widget>
     </widget>
@@ -523,6 +711,12 @@
   <tabstop>radioSSH1</tabstop>
   <tabstop>radioSSH2</tabstop>
   <tabstop>btnSave</tabstop>
+  <tabstop>checkMinimizeToTray</tabstop>
+  <tabstop>checkConfirmOnQuit</tabstop>
+  <tabstop>groupHotkey</tabstop>
+  <tabstop>comboHotkey1</tabstop>
+  <tabstop>comboHotkey2</tabstop>
+  <tabstop>editHotkey</tabstop>
  </tabstops>
  <resources>
   <include location="res/resource.qrc" />

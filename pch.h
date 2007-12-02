@@ -34,14 +34,12 @@ extern const char *SETTINGS_COMPANY;
 extern const char *SETTINGS_APP;
 
 #ifdef _DEBUG
-#define ATDEBUG qDebug
 #define ATASSERT(X) assert(X)
 #define ATVERIFY(X) assert(X)
-#else
-#define ATDEBUG (void)
+#else // _DEBUG
 #define ATASSERT (void)
 #define ATVERIFY(X) (X)
-#endif
+#endif // _DEBUG
 
 #ifndef WIN32
 	#define __FUNCTION__ ""
